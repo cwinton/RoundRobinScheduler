@@ -47,7 +47,7 @@ def print_schedule(schedule):
     for i in range(max_teams):
         team_defs[i] = "Team {:03}".format(i)
 
-    start_date = datetime.date(2014, 05, 28)
+    start_date = datetime.date(2014, 06, 5)
     
     times = ["6:45 PM", "7:15 PM", "7:45 PM", "8:15 PM", "8:45 PM", "9:15 PM"]
 #    times = ["6:30 PM", "7:30 PM", "8:30 PM", "9:30 PM", "10:30PM"]
@@ -57,17 +57,25 @@ def print_schedule(schedule):
     
     csv_sep = ";"
     
+    outputfile = "schedule.csv"
+    f = open (outputfile, 'w')
+    
     
     for week in schedule:
         for time_iter, timeslot in enumerate(week):
             for court_iter in range(max_courts):
                 home_index = team_defs[timeslot[court_iter*2]]
                 away_index = team_defs[timeslot[court_iter*2+1]]
-                print ("{date} {sep} {timestr} {sep} {home} {sep} {away} {sep} {court}").format(date = start_date.strftime("%m/%d/%y"), sep = csv_sep, timestr = times[time_iter], home = home_index, away = away_index, court = courts[court_iter])
+                outstring = "{date} {sep} {timestr} {sep} {home} {sep} {away} {sep} {court}".format(date = start_date.strftime("%m/%d/%y"), sep = csv_sep, timestr = times[time_iter], home = home_index, away = away_index, court = courts[court_iter])
+                print outstring
+                f.write(outstring + "\n")
             print csv_sep
+            f.write(csv_sep + "\n")
         print csv_sep
+        f.write(csv_sep + "\n")
         start_date = start_date + datetime.timedelta(7)
-
+        
+    f.close()
 
 def check_team_feasible (home, away, courts, timeslots, total_played):
     """ Check to ensure:
