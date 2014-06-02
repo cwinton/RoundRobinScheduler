@@ -267,7 +267,7 @@ def add_matchup(teams, this_week_matchups, courts, timeslots, reboot_weeks, this
     
             timeslots = []
             this_week_matchups = []
-    return teams, this_week_matchups, courts, timeslots, reboot_weeks, this_week, weeks, opponent_counts, total_played, matchups
+    return home,away, this_week_matchups, courts, timeslots, reboot_weeks, this_week, weeks, opponent_counts, total_played, matchups, fail_count
 
 if __name__ == '__main__':
     
@@ -325,77 +325,12 @@ if __name__ == '__main__':
         #   2 --- Schedule was inappropriate (some teams did not play frequently enough)
         while ((teams == None) or 
               ((fail_count % max_teams == 0) and (fail_count > 0))):
-     
-            # Print info
-            print_failure_info(this_week, fail_count, courts, timeslots, this_week_matchups, opponent_counts, total_played)
-            
-            # Reset current week 
-            courts = []
-            timeslots = []
-            this_week_matchups = []
-                        
-        
-            # Too Many Failures, back up a step
-            if (fail_count % max_teams == 0) and (fail_count > 0):
-                this_week, reboot_weeks, matchups, total_played, opponent_counts, weeks = backtrack(this_week, reboot_weeks, matchups, total_played, opponent_counts, weeks)
-        
-            # Pick a new team
-            teams = find_home_away_pair(randint(0,max_teams), randint(0,max_teams), courts, timeslots, this_week_matchups, matchups, opponent_counts, total_played)
+            teams, this_week, reboot_weeks, matchups, total_played, opponent_counts, weeks = failure_mode(home, away, courts, timeslots, this_week_matchups, matchups, opponent_counts, total_played, fail_count, reboot_weeks, this_week, weeks)
 
-            
             fail_count += 1
         
-        # Add them to this week's matchups
-        home, away = teams
-        this_week_matchups.append([home,away])
-        courts.append(home)
-        courts.append(away)
-        
-    
-    
-        # IF all the courts are full, move to the next timeslot
-        if (len(courts) == max_courts * 2):
-            # Save court info & reset
-            timeslots.append(courts)
-            courts = []
-            home = home + 1
-            away = away + 1
-        
-            # IF all the timeslots are full, store the week's info
-            if (len(timeslots) == max_times):
-                played = [0] * max_teams
-                for time in timeslots:
-                    for i in range(max_teams):
-                        played[i] += (i in time)
-                print played
-                if (min(played) >= min_per_night):
-                    fail_count = 0
-                    reboot_weeks = max(1, reboot_weeks-1)
-                    this_week += 1
-                    print this_week
-                    weeks.append(timeslots)
-                    for good_matchup in this_week_matchups:
-                        home_m,away_m = good_matchup
-                        opponent_counts[home_m][away_m] += 1
-                        opponent_counts[away_m][home_m] += 1
-                        
-                        total_played[home_m] += 1
-                        total_played[away_m] += 1
-                        matchups.append(good_matchup)
-                else:
-                    fail_count += 1
-                    home = home + randint(0,max_teams)
-                    away = away + randint(0,max_teams)
-        
-                timeslots = []
-                this_week_matchups = []
-            #if (not finish_schedule):
-            #    pass
-            
+        home, away, this_week_matchups, courts, timeslots, reboot_weeks, this_week, weeks, opponent_counts, total_played, matchups, fail_count = add_matchup(teams, this_week_matchups, courts, timeslots, reboot_weeks, this_week, weeks, opponent_counts, total_played, matchups, fail_count)
 
-            
-        
-        
     for week in weeks:
         print week
       
