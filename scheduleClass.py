@@ -15,9 +15,7 @@ class ScheduleClass():
     timeslots = []
     courts = []
     matchups = []
-    this_week_matchups = []
-    
-    temp_play_count = []
+
     
     def week_strength(self, week, team):
         # Defines how much time each team waits per night
@@ -36,24 +34,13 @@ class ScheduleClass():
         for week in self.weeks:
             for team in range(self.max_teams):
                 total_wait_time+= self.week_strength(week, team)
-        self.total_wait_time = total_wait_time
-        return total_wait_time
+        self.total_wait_time = total_wait_time / (self.max_weeks * self.max_teams * 1.0)
+        return self.total_wait_time
     
     
     
     def store_timeslot(self):
         for good_matchup in self.this_week_matchups:
-            home_m, away_m = good_matchup
-            
-            self.opponent_counts[home_m][away_m] += 1
-            self.opponent_counts[away_m][home_m] += 1
-            
-            self.total_played[home_m] += 1
-            self.total_played[away_m] += 1
-            
-            self.temp_play_count = [0 for i in range(self.max_teams)]
-
-            
             self.matchups.append(good_matchup)
             
     def add_week(self):
@@ -61,13 +48,23 @@ class ScheduleClass():
         self.store_timeslot()
         self.timeslots = []
         self.this_week_matchups = []
+        self.this_week_played = [0 for i in range(self.max_teams)]
+        if min(self.this_week_played) < self.min_per_night:
+            return False
+        else:
+            return True
+
     
     def add_timeslot(self):
         self.timeslots.append(self.courts)
         self.courts = []
         
         if len(self.timeslots) == self.max_times:
-            self.add_week()
+            print self.timeslots
+            print self.this_week_played
+            return self.add_week()
+        else:
+            return True
     
     def teams_feasible(self, home, away):
         """ Check to ensure:
@@ -82,8 +79,8 @@ class ScheduleClass():
         that_night_home = sum([time.count(home) for time in self.timeslots]) < self.max_per_night
         that_night_away = sum([time.count(home) for time in self.timeslots]) < self.max_per_night
         
-        overall_home = ((self.temp_play_count[home] - min(self.temp_play_count)) < 2)
-        overall_away = ((self.temp_play_count[away] - min(self.temp_play_count)) < 2)
+        overall_home = ((self.total_played[home] - min(self.total_played)) < 2)
+        overall_away = ((self.total_played[away] - min(self.total_played)) < 2)
         
         return (elsewhere and
                 themself and
@@ -99,26 +96,40 @@ class ScheduleClass():
         """
         this_week = ([home,away] not in self.this_week_matchups) and ([away,home] not in self.this_week_matchups)
         
-        min_home = min([temp_opp_count[home][i] for i in range(max_teams) if i != home])
-        min_away = min([temp_opp_count[away][i] for i in range(max_teams) if i != away])
-        home_freq = ((temp_opp_count[home][away] - min_home) == 0)
-        away_freq = ((temp_opp_count[away][home] - min_away) == 0)       
+        min_home = min([self.opponent_counts[home][i] for i in range(self.max_teams) if i != home])
+        min_away = min([self.opponent_counts[away][i] for i in range(self.max_teams) if i != away])
+        home_freq = ((self.opponent_counts[home][away] - min_home) == 0)
+        away_freq = ((self.opponent_counts[away][home] - min_away) == 0)
+        
+        return (this_week and
+                home_freq and
+                away_freq)       
     
+    
+    def check_feasible(self, home, away):
+    # Check viability of home/away pair
+        return (self.teams_feasible(home,away) and
+            self.matchup_feasible(home,away))
+        
     def add_game (self, home, away):
-        # Check viability of home/away pair
-        if (self.teams_feasible(home,away) and
-            self.matchup_feasible(home,away)):
-            
-            # Add to matchups if acceptable
-            self.this_week_matchups.append([home,away])
-            self.courts.append(home)
-            self.courts.append(away)
-            
-            self.temp_play_count[home] += 1
-            self.temp_play_count[away] += 1
+        # Add to matchups if acceptable
+        self.this_week_matchups.append([home,away])
+        self.courts.append(home)
+        self.courts.append(away)
+        
+        self.total_played[home] += 1
+        self.total_played[away] += 1
+        
+        self.this_week_played[home] += 1
+        self.this_week_played[away] += 1
+        
+        self.opponent_counts[home][away] += 1
+        self.opponent_counts[away][home] += 1
         
         if len(self.courts) == self.max_courts * 2:
-            self.add_timeslot()
+            return self.add_timeslot()
+        else:
+            return True
         
         
 
@@ -137,8 +148,9 @@ class ScheduleClass():
         # Storage Terms
         self.total_played = [0 for i in range(max_teams)]
         self.opponent_counts = [[0 for x in range(max_teams)] for y in range(max_teams)]
-        self.temp_play_count = [0 for i in range(max_teams)]
-
+        self.this_week_played = [0 for i in range(max_teams)]
+        self.this_week_matchups = []
+    
         
         # No team should play significantly more than another team / night
         self.max_per_night = int(ceil((max_courts * max_times * 2) / (max_teams*1.0)))
