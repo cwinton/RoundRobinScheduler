@@ -15,6 +15,8 @@ class ScheduleClass():
     timeslots = []
     courts = []
     matchups = []
+    opponent_counts = []
+    this_week_matchups = []
 
     
     def week_strength(self, week, team):
@@ -27,7 +29,8 @@ class ScheduleClass():
             return lastplay - firstplay - playtimes + 1
         else:
             # Penalize for a team not playing
-            return len(playcount)*2
+            #print "Team {:2} did not play in Week {:2}".format(team, week)
+            return self.max_times
     
     def solution_strength(self):
         total_wait_time = 0
@@ -48,11 +51,16 @@ class ScheduleClass():
         self.store_timeslot()
         self.timeslots = []
         self.this_week_matchups = []
+
+        mincheck = self.min_per_night <= min(self.this_week_played)
         self.this_week_played = [0 for i in range(self.max_teams)]
-        if min(self.this_week_played) < self.min_per_night:
-            return False
-        else:
-            return True
+        
+        if len(self.weeks) == self.max_weeks:
+            self.solution_strength()
+            self.fullSolution = True
+        
+        return mincheck
+        
 
     
     def add_timeslot(self):
@@ -60,8 +68,8 @@ class ScheduleClass():
         self.courts = []
         
         if len(self.timeslots) == self.max_times:
-            print self.timeslots
-            print self.this_week_played
+            #print self.timeslots
+            #print self.this_week_played
             return self.add_week()
         else:
             return True
@@ -109,7 +117,8 @@ class ScheduleClass():
     def check_feasible(self, home, away):
     # Check viability of home/away pair
         return (self.teams_feasible(home,away) and
-            self.matchup_feasible(home,away))
+            self.matchup_feasible(home,away) and 
+            len(self.weeks) < self.max_weeks)
         
     def add_game (self, home, away):
         # Add to matchups if acceptable
@@ -131,28 +140,65 @@ class ScheduleClass():
         else:
             return True
         
+    def add_game_with_feas_check(self,home,away):
+        if self.check_feasible(home,away):
+            return self.add_game(home, away)
+        else:
+            return False
+        
         
 
 
-    def __init__(self, max_weeks, max_times, max_courts, max_teams):
+    def __init__(self, max_weeks=None, max_times=None, max_courts=None, max_teams=None, old_schedule = None):
         '''
         Constructor
         '''
+        if old_schedule == None:
+            # Define the problem
+            self.max_weeks = max_weeks
+            self.max_times = max_times
+            self.max_courts = max_courts
+            self.max_teams = max_teams
+            
+            # Storage Terms
+            self.total_played = [0 for i in range(max_teams)]
+            self.opponent_counts = [[0 for x in range(max_teams)] for y in range(max_teams)]
+            self.this_week_played = [0 for i in range(max_teams)]
+
         
-        # Define the problem
-        self.max_weeks = max_weeks
-        self.max_times = max_times
-        self.max_courts = max_courts
-        self.max_teams = max_teams
-        
-        # Storage Terms
-        self.total_played = [0 for i in range(max_teams)]
-        self.opponent_counts = [[0 for x in range(max_teams)] for y in range(max_teams)]
-        self.this_week_played = [0 for i in range(max_teams)]
-        self.this_week_matchups = []
-    
-        
-        # No team should play significantly more than another team / night
-        self.max_per_night = int(ceil((max_courts * max_times * 2) / (max_teams*1.0)))
-        self.min_per_night = int(floor((max_courts * max_times * 2) / (max_teams*1.0)))
+            
+            # No team should play significantly more than another team / night
+            self.max_per_night = int(ceil((max_courts * max_times * 2) / (max_teams*1.0)))
+            self.min_per_night = int(floor((max_courts * max_times * 2) / (max_teams*1.0)))
+            
+            self.fullSolution = False
+        else:
+            self.max_weeks = old_schedule.max_weeks
+            self.max_times = old_schedule.max_times
+            self.max_courts = old_schedule.max_courts
+            self.max_teams = old_schedule.max_teams
+            
+            self.courts = old_schedule.courts[:]
+            self.fullSolution = old_schedule.fullSolution
+            
+            self.matchups = [mu[:] for mu in old_schedule.matchups]
+
+            self.max_per_night = old_schedule.max_per_night
+            self.min_per_night = old_schedule.min_per_night
+            
+            self.opponent_counts = [opc[:] for opc in old_schedule.opponent_counts]
+            
+            self.this_week_matchups = [twm[:] for twm in old_schedule.this_week_matchups] 
+
+            self.this_week_played = old_schedule.this_week_played[:]
+
+            self.timeslots = [ts[:] for ts in old_schedule.timeslots]
+
+            self.total_played = old_schedule.total_played[:]
+            
+            if self.fullSolution:
+                self.total_wait_time = old_schedule.total_wait_time
+
+            self.weeks = [wk[:] for wk in old_schedule.weeks]
+
         
