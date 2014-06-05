@@ -6,6 +6,8 @@ Created on May 30, 2014
 from math import ceil
 from math import floor
 from random import randint
+from WeightSolution import solution_strength
+from scheduling_tools import calc_temp_play_count, check_matchup_feasible, check_team_feasible
 import datetime
 #import msvcrt as m
 
@@ -77,71 +79,13 @@ def print_schedule(schedule):
         
     f.close()
 
-def check_team_feasible (home, away, courts, timeslots, total_played):
-    """ Check to ensure:
-    1.  Not playing elsewhere
-    2.  Not playing themself
-    3.  Not played too much already that night
-    4.  Not played twice more than another team overall
-    5.  [optional] Max times played
-    """
-    elsewhere = home not in courts
-    themself = home != away
-    
-    that_night = sum([time.count(home) for time in timeslots]) < max_per_night
-    
-    temp_play_count = calc_temp_play_count(total_played, courts, timeslots)
-    overall = ((temp_play_count[home] - min(temp_play_count)) < 2) 
-    
-    #max_times_played = (temp_play_count[home] < max_played)
-    
-    return (elsewhere and 
-            themself and
-            that_night and
-            overall)
+
     
             #max_times_played)
-def calc_temp_play_count (total_played, courts, timeslots):
-    """Calculate how many times a team has played 
-    INCLUDING potential matchups this week
-    """
-    
-    temp_play_count = [total_played[i] + courts.count(i) + sum([time.count(i) for time in timeslots]) for i in range(max_teams)]
-    return temp_play_count
+
                          
-def check_matchup_feasible (home, away, potential_matchups, matchups, opponent_counts):
-    """ Check to ensure:
-    1.  Matchup has not already occurred previously (deprecated)
-    2.  Matchup is not scheduled for this week
-    3.  Teams have not repeatedly played each other without playing other teams first
-    """
-    #previously = [home,away] not in matchups
-    previously = True
-    
-    this_week = ([home,away] not in potential_matchups) and ([away,home] not in potential_matchups)
-    
-    temp_opp_count = calc_temp_opponents(opponent_counts, potential_matchups)
-    min_home = min([temp_opp_count[home][i] for i in range(max_teams) if i != home])
-    min_away = min([temp_opp_count[away][i] for i in range(max_teams) if i != away])
-    home_freq = ((temp_opp_count[home][away] - min_home) == 0)
-    away_freq = ((temp_opp_count[away][home] - min_away) == 0)
-    
-    return (previously and 
-            this_week and
-            home_freq and
-            away_freq)               
                      
-def calc_temp_opponents(opponent_counts, potential_matchups):
-    """Calculate how many times a team will have played other teams
-    INCLUDING potential matchups this week
-    """
-    temp_opp_count = [[opponent_counts[h_ind][a_ind] for a_ind in range(max_teams)] for h_ind in range(max_teams)]
-    for this_week_matchup in potential_matchups:
-        tw_h = this_week_matchup[0]
-        tw_a = this_week_matchup[1]
-        temp_opp_count[tw_h][tw_a] += 1
-        temp_opp_count[tw_a][tw_h] += 1
-    return temp_opp_count
+
 
     
 def find_home_away_pair(home_start, away_start, courts, timeslots, potential_matchups, matchups, opponent_counts, total_played):
@@ -159,11 +103,11 @@ def find_home_away_pair(home_start, away_start, courts, timeslots, potential_mat
             away = (away_start + away_iter) % max_teams
             
             # Check home team viability
-            if (check_team_feasible(home, away, courts, timeslots, total_played) and
+            if (check_team_feasible (home, away, courts, timeslots, total_played, max_teams, max_per_night) and
                 # Check away team viability 
-                check_team_feasible(away, home, courts, timeslots, total_played) and
+                check_team_feasible (away, home, courts, timeslots, total_played, max_teams, max_per_night) and
                 # Check home/away viability
-                check_matchup_feasible(home, away, potential_matchups, matchups,opponent_counts)):
+                check_matchup_feasible(home, away, potential_matchups, matchups,opponent_counts, max_teams)):
                     return home, away
 
 
@@ -178,7 +122,7 @@ def print_failure_info(this_week, fail_count, courts, timeslots, this_week_match
     print "Opp Counts: ", opponent_counts
     print "Total Played: ", total_played
     
-    temp_total_played = calc_temp_play_count (total_played, courts, timeslots)
+    temp_total_played = calc_temp_play_count (total_played, courts, timeslots, max_teams)
     print "Temp Total Played: ", temp_total_played
     if (min(temp_total_played) == max(temp_total_played)):
         print "Equal Condition"
@@ -339,6 +283,9 @@ if __name__ == '__main__':
         
         home, away, this_week_matchups, courts, timeslots, reboot_weeks, this_week, weeks, opponent_counts, total_played, matchups, fail_count = add_matchup(teams, this_week_matchups, courts, timeslots, reboot_weeks, this_week, weeks, opponent_counts, total_played, matchups, fail_count)
 
+    
+    print weeks
+    
     for week in weeks:
         print week
       
@@ -350,6 +297,7 @@ if __name__ == '__main__':
 
     print "Opponent counts: ", opponent_counts
     
+    print "Solution Strength: ", solution_strength(max_weeks,max_times,max_courts,max_teams,weeks)
     
     # Count Matchup Frequencies:
     
