@@ -9,20 +9,8 @@
 #ifndef __Round_Robin_Scheduler__Schedule__
 #define __Round_Robin_Scheduler__Schedule__
 
-#include <iostream>
-#include <list>
-#include <vector>
-#include <algorithm>
-#include <numeric>
-#include <math.h>
-#include <fstream>
+#include "defs.h"
 
-
-typedef std::vector<int> Vector;
-typedef std::vector<Vector> DoubleVector;
-typedef std::vector<DoubleVector> TripleVector;
-
-using std::vector;
 
 class RRSchedule{
     int max_weeks, max_times, max_courts, max_teams;
@@ -43,19 +31,6 @@ class RRSchedule{
     Vector total_played;
     Vector this_week_played;
 
-    
-    void allocate1D (Vector&, int);
-    void allocate2D (DoubleVector & _invect, int row, int col);
-    void allocate3D (TripleVector & _invect, int row, int col, int depth);
-    
-    void init1D(Vector& _invect, int);
-    void init2D(DoubleVector& _invect, int, int);
-    
-
-    
-    void print_Vector(Vector _invect, std::ostream&);
-    void print_DoubleVector(DoubleVector _invect, std::ostream&);
-    void print_TripleVector(TripleVector _invect, std::ostream&);
 
     
     bool isPresent(Vector, int);
@@ -72,8 +47,7 @@ class RRSchedule{
     bool check_feasible(int, int);
     bool teams_feasible(int, int);
     bool matchup_feasible(int, int);
-    
-    int VectMin(Vector);
+
     
 public:
     RRSchedule(int max_weeks, int max_times, int max_courts, int max_teams);
@@ -86,7 +60,6 @@ public:
     double total_wait(){return total_wait_time;}
     
     void print_schedule();
-    
     
     int get_weeks() {return max_weeks; }
 };
