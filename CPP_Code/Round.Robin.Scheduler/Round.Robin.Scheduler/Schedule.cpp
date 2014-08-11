@@ -192,46 +192,89 @@ bool RRSchedule::matchup_feasible(int home, int away)
     Vector hVec, aVec;
     hVec.push_back(home); hVec.push_back(away);
     aVec.push_back(away); aVec.push_back(home);
-    bool this_week = (not isPresent(this_week_matchups, hVec)) and (not isPresent(this_week_matchups, aVec));
-    
-    int min_played_home, min_played_away;;
-    
-    Vector home_counts (opponent_counts[home]);
-    home_counts.erase(home_counts.begin() + home);
-    min_played_home = VectMin(home_counts);
-    
-    Vector away_counts(opponent_counts[away]);
-    away_counts.erase(away_counts.begin() + away);
-    min_played_away = VectMin(away_counts);
-    
-    bool freq = ((opponent_counts[home][away] - min_played_home) == 0) and ((opponent_counts[away][home] - min_played_away) == 0);
 
-    return this_week and freq;
+    bool this_week = (not isPresent(this_week_matchups, hVec)) and (not isPresent(this_week_matchups, aVec));
+    bool freq = false;
+    
+    if (this_week)
+    {
+        int min_played_home, min_played_away;;
+        
+        Vector home_counts (opponent_counts[home]);
+        home_counts.erase(home_counts.begin() + home);
+        min_played_home = VectMin(home_counts);
+        
+        Vector away_counts(opponent_counts[away]);
+        away_counts.erase(away_counts.begin() + away);
+        min_played_away = VectMin(away_counts);
+        
+        freq = ((opponent_counts[home][away] - min_played_home) == 0) and ((opponent_counts[away][home] - min_played_away) == 0);
+        
+        if (freq)
+        {
+            // Only return true if all tests pass
+            return true;
+        }
+    }
+    
+    // Otherwise return false
+    return false;
 }
 
 bool RRSchedule::teams_feasible(int home, int away)
 /* Check to ensure:
-1.  Not playing elsewhere
-2.  Not playing themself
+1.  Not playing themself
+2.  Not playing elsewhere
 3.  Not played too much already that night
 4.  Not played twice more than another team overall
+5.  Will not force a wait of <x> hours
 */
 {
-    bool elsewhere = (not isPresent(courts, home)) and (not isPresent(courts, away));
-    bool themself = (home != away);
+    bool themself = false;
+    bool elsewhere = false;
+    bool that_night = false;
+    bool overall = false;
+
+    themself = (home != away);
+    if (themself)
+    {
+        elsewhere = (not isPresent(courts, home)) and (not isPresent(courts, away));
+        if (elsewhere)
+        {
+            that_night = (this_week_played[home] < max_per_night) and (this_week_played[away] < max_per_night);
+            if (that_night)
+            {
+                int min_played = VectMin(total_played);
+                overall = (total_played[home] - min_played < 2) and (total_played[away] - min_played < 2);
+                if (overall)
+                {
+                    // Only return true if all tests pass
+                    return true;
+                }
+            }
+        }
+    }
     
-    bool that_night = (this_week_played[home] < max_per_night) and (this_week_played[away] < max_per_night);
     
-    int min_played = VectMin(total_played);
     
-    bool overall = (total_played[home] - min_played < 2) and (total_played[away] - min_played < 2);
-    
-    return elsewhere and themself and that_night and overall;
+    // Otherwise return false
+    return false;
 }
 
 bool RRSchedule::check_feasible(int home, int away)
 {
-    return (teams_feasible(home,away) and matchup_feasible(home,away) and weeks.size() < max_weeks);
+    if (weeks.size() < max_weeks)
+    {
+        if (teams_feasible(home, away))
+        {
+            if (matchup_feasible(home, away))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+//    return (teams_feasible(home,away) and matchup_feasible(home,away) and weeks.size() < max_weeks);
 }
 
 bool RRSchedule::add_game_with_feas_check(int home, int away)
