@@ -16,6 +16,20 @@ League::League(int _nteams, int _nWeeks, int _nTimeSlots, int _nCourts)
     nTimeSlots = _nTimeSlots;
     nCourts = _nCourts;
     
-    weeks.resize(nWeeks);
-    teams.resize(nTeams);
+    weeks.reserve(nWeeks);
+    teams.reserve(nTeams);
+    
+    Team blankTeam;
+    
+    for (int i = 0; i < nTeams; i++)
+    {
+        blankTeam = new Team(nTeams, nTimeSlots, "")
+    }
+        teams.push_back(i);
+}
+
+bool League::addGame(Team home, Team away)
+{
+    
+    return false;
 }

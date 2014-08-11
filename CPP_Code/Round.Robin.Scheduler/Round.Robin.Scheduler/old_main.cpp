@@ -8,7 +8,7 @@
 
 #include <iostream>
 #include "defs.h"
-#include "League.h"
+#include "Schedule.h"
 
 
 
@@ -17,11 +17,11 @@ int best_wait_time;
 int max_weeks = 9;
 int max_times = 6;
 int max_courts = 2;
-int max_teams = 10;
+int max_teams = 20;
 
 
 
-/*
+
 int find_schedule(RRSchedule schedule, int home, int away)
 {
     if (schedule.add_game_with_feas_check(home, away) and schedule.total_wait() < best_wait_time)
@@ -39,7 +39,7 @@ int find_schedule(RRSchedule schedule, int home, int away)
         }
         else
         {
-            #pragma omp parallel for
+#pragma omp parallel for
             for (int h_iter = 0; h_iter < max_teams; h_iter++)
                 for (int a_iter = 0; a_iter < max_teams; a_iter++)
                 {
@@ -50,15 +50,14 @@ int find_schedule(RRSchedule schedule, int home, int away)
     
     return 0;
 }
- */
 
 int main(int argc, const char * argv[])
 {
-    League aLeague(max_teams, max_weeks, max_times, max_courts);
     
-    /*
-
-
+    
+    
+    
+    
     best_wait_time = max_weeks * max_times * max_courts*2;
     //best_wait_time = 128;
     std::cout << "HERE WE GO!!!! " << best_wait_time << std::endl;
@@ -80,20 +79,20 @@ int main(int argc, const char * argv[])
     printf("Running Serial\n");
     find_schedule(newSched, 0, 1);
 #endif
-*/
     
-/*    for (int home = 0; home < 500; home ++)
-    {
-        for (int away = 0; away < 500; away ++)
-        {
-            newSched.add_game_with_feas_check((home)%max_teams,(away)%max_teams);
-        }
-    }
-
     
-    newSched.print_schedule();
-    newSched.compute_strength();
- */
+    /*    for (int home = 0; home < 500; home ++)
+     {
+     for (int away = 0; away < 500; away ++)
+     {
+     newSched.add_game_with_feas_check((home)%max_teams,(away)%max_teams);
+     }
+     }
+     
+     
+     newSched.print_schedule();
+     newSched.compute_strength();
+     */
     return 0;
 }
 

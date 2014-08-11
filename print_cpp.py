@@ -61,7 +61,7 @@ if __name__ == '__main__':
     
     data = file.readlines()
     
-    fdata = [line.rstrip('\n') for line in data if line.rstrip('\n') != '']
+    fdata = [line.rstrip('\n').rstrip(',') for line in data if line.rstrip('\n') != '']
     
     max_weeks = int(fdata[0])
     max_times = int(fdata[1])

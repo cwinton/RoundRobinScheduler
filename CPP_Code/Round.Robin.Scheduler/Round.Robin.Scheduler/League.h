@@ -29,6 +29,7 @@ class League{
     
 public:
     League(int _nteams, int _nWeeks, int _nTimeSlots, int _nCourts);
+    bool addGame(Team home, Team away);
     
 };
 
