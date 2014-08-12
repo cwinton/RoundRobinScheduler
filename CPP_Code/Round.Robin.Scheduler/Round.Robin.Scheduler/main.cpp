@@ -10,29 +10,42 @@
 #include "Schedule.h"
 
 
+
+int max_weeks = 13;
+int max_times = 3;
+int max_courts = 4;
+int max_teams = 14;
+
 int best_wait_time;
-int max_weeks = 9;
-int max_times = 6;
-int max_courts = 2;
-int max_teams = 11;
+int scaled_best_wait_time;
+
+char FILENAME[] = "/Users/coreywinton/git/RoundRobinScheduling/CPP_Code/Round.Robin.Scheduler/Round.Robin.Scheduler/schedules.txt";
 
 
 
 
-int find_schedule(RRSchedule schedule, int home, int away)
+
+
+int find_schedule(RRSchedule schedule, int home, int away, int counter)
 {
+    //counter ++;
+    //printf("%d \n", counter);
     if (schedule.add_game_with_feas_check(home, away) and schedule.total_wait() < best_wait_time)
     {
         if (schedule.full_solution())
         {
-            best_wait_time = schedule.total_wait();
-            std::cout << "***************************" << std::endl;
-            std::cout << "Time Slots Waiting: " << best_wait_time << "(" << schedule.wait_per_team() << " per team)" << std::endl;
-            schedule.print_schedule();
-            std::cout << "Time Slots Waiting: " << best_wait_time << "(" << schedule.wait_per_team() << " per team)" << std::endl;
-            std::cout << "***************************" << std::endl;
-            
-            return best_wait_time;
+            if (schedule.scaled_total_wait() < scaled_best_wait_time)
+            {
+                best_wait_time = schedule.total_wait();
+                scaled_best_wait_time = schedule.scaled_total_wait();
+                std::cout << "***************************" << std::endl;
+                std::cout << "Time Slots Waiting: " << best_wait_time << "(" << schedule.wait_per_team() << " per team)" << std::endl;
+                schedule.print_schedule();
+                std::cout << "Time Slots Waiting: " << best_wait_time << "(" << schedule.wait_per_team() << " per team)" << std::endl;
+                std::cout << "***************************" << std::endl;
+                
+                return best_wait_time;
+            }
         }
         else
         {
@@ -40,7 +53,7 @@ int find_schedule(RRSchedule schedule, int home, int away)
             for (int h_iter = 0; h_iter < max_teams; h_iter++)
                 for (int a_iter = 0; a_iter < max_teams; a_iter++)
                 {
-                    find_schedule(schedule, (home+h_iter)%max_teams, (away+a_iter)%max_teams);
+                    find_schedule(schedule, (home+h_iter)%max_teams, (away+a_iter)%max_teams, counter);
                 }
         }
     }
@@ -60,12 +73,13 @@ int main(int argc, const char * argv[])
     }
 
 
-    //best_wait_time = max_weeks * max_times * max_courts*2;
-    best_wait_time = 128;
+    best_wait_time = max_weeks * max_times * max_courts*2;
+    scaled_best_wait_time = best_wait_time * 100;
+    //best_wait_time = 128;
     std::cout << "HERE WE GO!!!! " << best_wait_time << std::endl;
-    RRSchedule newSched(max_weeks, max_times, max_courts, max_teams);
+    RRSchedule newSched(max_weeks, max_times, max_courts, max_teams, FILENAME);
     
-    find_schedule(newSched, 0, 1);
+    find_schedule(newSched, 0, 1, 0);
 
     
 /*    for (int home = 0; home < 500; home ++)

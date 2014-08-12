@@ -8,6 +8,7 @@
 
 #include "Schedule.h"
 
+
 /*
 template <typename T>
 T **AllocateTwoDArray( int nRows, int nCols)
@@ -53,7 +54,7 @@ void RRSchedule::print_Vector(Vector _invect, std::ostream &stream = std::cout)
     {
         stream << *iter << ",";
     }
-    stream << std::endl;
+    stream << '\n' << std::flush;
 }
 
 
@@ -62,7 +63,7 @@ void RRSchedule::print_DoubleVector(DoubleVector _invect, std::ostream &stream =
     for (DoubleVector::const_iterator row = _invect.begin(); row != _invect.end(); ++row)
     {
         print_Vector(*row, stream);
-        stream << std::endl;
+        stream << '\n' << std::flush;
     }
 }
 
@@ -72,7 +73,7 @@ void RRSchedule::print_TripleVector(TripleVector _invect, std::ostream &stream =
     for (TripleVector::const_iterator row = _invect.begin(); row != _invect.end(); ++row)
     {
         print_DoubleVector(*row, stream);
-        stream << std::endl;
+        stream << '\n' << std::flush;
     }
 }
 
@@ -114,21 +115,56 @@ int RRSchedule::week_strength(DoubleVector week, int team)
     }
     else
     {
-        return max_times;
+        return 0;
+        //return max_times;
     }
         
+}
+
+int RRSchedule::wait_time(DoubleVector week, int team)
+{
+    Vector playcount;
+    for (DoubleVector::const_iterator tslot = week.begin(); tslot != week.end(); ++tslot)
+    {
+        playcount.push_back(isPresent(*tslot, team));
+    }
+    int playtimes = std::accumulate(playcount.begin(), playcount.end(), 0);
+    
+    if (playtimes > 0)
+    {
+        int firstplay = int(std::find(playcount.begin(), playcount.end(), 1) - playcount.begin());
+        
+        // waiting time = total time - time of first play - number of times played
+        int wait_time = int(week.size()) - (firstplay + playtimes);
+        return wait_time;
+    }
+    
+    else
+    {
+        return 0;
+    }
+
 }
 
 void RRSchedule::compute_strength()
 {
     total_wait_time = 0;
+    init1D(total_waiting, max_teams);
+    
+    int teamWait;
     for (TripleVector::const_iterator week = weeks.begin(); week != weeks.end(); ++ week)
     {
         for (int team = 0; team < max_teams; team++)
         {
-            total_wait_time += week_strength(*week, team);
+            teamWait = week_strength(*week, team);
+            total_wait_time += teamWait;
+            total_waiting[team] += teamWait;
         }
     }
+    
+    // Scale by total wait time discrepencies
+    //total_wait_time = total_wait_time * std::max((VectMax(total_played) - VectMin(total_played)),1);
+    
     per_team_wait_time = total_wait_time * 1.0 / (max_weeks * max_teams * 1.0);
 
 }
@@ -138,25 +174,39 @@ int RRSchedule::VectMin (Vector _invect)
     return *std::min_element(_invect.begin(), _invect.end());
 }
 
+int RRSchedule::VectMax(Vector _invect)
+{
+    return *std::max_element(_invect.begin(), _invect.end());
+}
+
 bool RRSchedule::add_week()
 {
-    weeks.push_back(timeslots);
-    store_timeslot();
-
-    allocate2D(timeslots, max_times, max_courts*2);
-    init2D(this_week_matchups, max_teams, max_teams);
-    
     bool mincheck = (min_per_night <= VectMin(this_week_played));
-
-    init1D(this_week_played,max_teams);
     
-    compute_strength();
-
-    if (weeks.size() == max_weeks)
+    if (mincheck)
     {
-       fullSolution = true;
+        weeks.push_back(timeslots);
+        store_timeslot();
+
+        allocate2D(timeslots, max_times, max_courts*2);
+        init2D(this_week_matchups, max_teams, max_teams);
+        
+        
+
+        init1D(this_week_played,max_teams);
+        
+        compute_strength();
+        
+        printf ("Current Size: %d weeks.  Total Wait Time: %d \n", int(weeks.size()), total_wait_time);
+
+        if (weeks.size() == max_weeks)
+        {
+            //scale solution wait time
+            scaled_total_wait_time = total_wait_time * (10*std::max(VectMax(total_played) - VectMin(total_played),1) + std::max(VectMax(total_waiting) - VectMin(total_waiting), 1));
+            scaled_per_team_wait_time = scaled_total_wait_time * 1.0 / (max_weeks * max_teams * 1.0);
+            fullSolution = true;
+        }
     }
-    
     return mincheck;
 }
 
@@ -235,21 +285,40 @@ bool RRSchedule::teams_feasible(int home, int away)
     bool that_night = false;
     bool overall = false;
 
+    // Nesting in if-then was stupid
+    // Eager evaluation
+/*    if (int(weeks.size()) > 0)
+    {
+        printf("\n");
+    }
+ */
     themself = (home != away);
     if (themself)
     {
         elsewhere = (not isPresent(courts, home)) and (not isPresent(courts, away));
         if (elsewhere)
         {
+            
             that_night = (this_week_played[home] < max_per_night) and (this_week_played[away] < max_per_night);
             if (that_night)
             {
                 int min_played = VectMin(total_played);
-                overall = (total_played[home] - min_played < 2) and (total_played[away] - min_played < 2);
+                overall = (total_played[home] - min_played < MAX_PLAYED_GAP) and (total_played[away] - min_played < MAX_PLAYED_GAP);
                 if (overall)
                 {
-                    // Only return true if all tests pass
-                    return true;
+
+                    
+                    int home_wait_time = wait_time(timeslots, home);
+                    bool home_wait = (home_wait_time <= MAX_WAIT_TIME) and (total_waiting[home] + home_wait_time <= VectMin(total_waiting) + MAX_WAIT_GAP);
+                    
+                    if (home_wait)
+                    {
+                        int away_wait_time = wait_time(timeslots, away);
+                        bool away_wait = (away_wait_time <= MAX_WAIT_TIME) and (total_waiting[away] + away_wait_time <= VectMin(total_waiting) + MAX_WAIT_GAP);
+                        
+                        return away_wait;
+                        
+                    }
                 }
             }
         }
@@ -349,14 +418,21 @@ void RRSchedule::allocate3D(TripleVector & _invect, int row, int col, int depth)
     }
 }
 
-RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max_teams)
+RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max_teams, char* _FILENAME)
 {
     max_weeks = _max_weeks;
     max_times = _max_times;
     max_courts = _max_courts;
     max_teams = _max_teams;
     
+    FILENAME = _FILENAME;
+    
     min_per_night = (max_courts * max_times * 2) / max_teams;
+    // Relax the min per night requirement?
+    if (min_per_night > 1)
+    {
+        min_per_night--;
+    }
     max_per_night = (max_courts * max_times * 2) / max_teams + ( ((max_courts * max_times * 2) % max_teams) != 0);
     
     fullSolution = false;
@@ -365,6 +441,7 @@ RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max
     init1D(this_week_played, max_teams);
     allocate1D(courts, max_courts*2);
     init1D(total_played, max_teams);
+    init1D(total_waiting, max_teams);
     
     init2D(opponent_counts, max_teams, max_teams);
     allocate2D(timeslots, max_times, max_courts*2);
@@ -372,43 +449,56 @@ RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max
     init2D(this_week_matchups, max_times*max_courts, 2);
     
     allocate3D(weeks, max_weeks, max_times, max_courts*2);
+    
+    // clear old file
+    std::ofstream outputfile;
+    outputfile.open(FILENAME);
+    outputfile.close();
 }
 
 void RRSchedule::print_schedule()
 {
     
     std::ofstream outputfile;
-    outputfile.open ("/Users/coreywinton/git/RoundRobinScheduling/CPP_Code/Round.Robin.Scheduler/Round.Robin.Scheduler/schedules.txt");
-    outputfile << max_weeks << std::endl;
-    outputfile << max_times << std::endl;
-    outputfile << max_courts << std::endl;
-    outputfile << max_teams << std::endl;
+    outputfile.open (FILENAME, std::ios::app);
+    
+    outputfile << "\n\n***NEW SCHEDULE***\n\n" << std::flush;
+    outputfile << max_weeks << '\n' << std::flush;
+    outputfile << max_times << '\n' << std::flush;
+    outputfile << max_courts << '\n' << std::flush;
+    outputfile << max_teams << '\n' << std::flush;
     
     
-    std::cout << "Weeks:" << std::endl;
-    outputfile << "Weeks:" << std::endl;
+    std::cout << "Weeks:" << '\n' << std::flush;
+    outputfile << "Weeks:" << '\n' << std::flush;
     print_TripleVector(weeks);
     print_TripleVector(weeks, outputfile);
     
-    std::cout << "TimeSlots:" << std::endl;
+    std::cout << "TimeSlots:" << '\n' << std::flush;
     print_DoubleVector(timeslots);
     
-    std::cout << "Courts:" << std::endl;
+    std::cout << "Courts:" << '\n' << std::flush;
     print_Vector(courts);
     
     
-    std::cout << std::endl << "Play Counts:" << std::endl;
-    outputfile << std::endl << "Play Counts:" << std::endl;
+    std::cout << '\n' << std::flush << "Play Counts:" << '\n' << std::flush;
+    outputfile << '\n' << std::flush << "Play Counts:" << '\n' << std::flush;
     print_Vector(total_played);
     print_Vector(total_played, outputfile);
     
-    std::cout << std::endl << "Matchup Counts:" << std::endl;
-    outputfile << std::endl << "Matchup Counts:" << std::endl;
+    std::cout << '\n' << std::flush << "Matchup Counts:" << '\n' << std::flush;
+    outputfile << '\n' << std::flush << "Matchup Counts:" << '\n' << std::flush;
     print_DoubleVector(opponent_counts);
     print_DoubleVector(opponent_counts, outputfile);
     
-    outputfile << "Hours Waiting: " << total_wait_time << std::endl;
-    outputfile << "Hours Per Team: " << per_team_wait_time << std::endl;
+    outputfile << "Hours Waiting: " << total_wait_time << '\n' << std::flush;
+    outputfile << "Hours Per Team: " << per_team_wait_time << '\n' << std::flush;
+    
+    outputfile << "\nWaits Per Team: " << std::flush;
+    std::cout << "\nWaits Per Team: \n" << std::flush;
+    print_Vector(total_waiting);
+    print_Vector(total_waiting, outputfile);
+   
     
     outputfile.close();
 }

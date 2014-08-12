@@ -25,12 +25,18 @@ typedef std::vector<DoubleVector> TripleVector;
 using std::vector;
 
 class RRSchedule{
+    const static int MAX_WAIT_TIME = 2;  // <=
+    const static int MAX_PLAYED_GAP = 2; // <
+    const static int MAX_WAIT_GAP = 2;   // <=
+    
+    char* FILENAME;
+    
     int max_weeks, max_times, max_courts, max_teams;
     int max_per_night, min_per_night;
     bool fullSolution;
     
-    int total_wait_time;
-    double per_team_wait_time;
+    int total_wait_time, scaled_total_wait_time;
+    double per_team_wait_time, scaled_per_team_wait_time;
     
     TripleVector weeks;
 
@@ -42,6 +48,7 @@ class RRSchedule{
     Vector courts;
     Vector total_played;
     Vector this_week_played;
+    Vector total_waiting;
 
     
     void allocate1D (Vector&, int);
@@ -61,6 +68,8 @@ class RRSchedule{
     bool isPresent(Vector, int);
     bool isPresent(DoubleVector, Vector);
     int week_strength(DoubleVector, int);
+    int wait_time(DoubleVector week, int team);
+
     void compute_strength();
     void update_strength();
     
@@ -74,17 +83,21 @@ class RRSchedule{
     bool matchup_feasible(int, int);
     
     int VectMin(Vector);
+    int VectMax(Vector);
     
 public:
-    RRSchedule(int max_weeks, int max_times, int max_courts, int max_teams);
+    RRSchedule(int max_weeks, int max_times, int max_courts, int max_teams, char* FILENAME);
     bool add_game(int home, int away);
     bool add_game_with_feas_check(int,int);
     
     bool full_solution(){return fullSolution;}
     
     double wait_per_team(){return per_team_wait_time;}
-    double total_wait(){return total_wait_time;}
+    int total_wait(){return total_wait_time;}
     
+    double scaled_wait_per_team(){return scaled_per_team_wait_time;}
+    int scaled_total_wait(){return scaled_total_wait_time;}
+
     void print_schedule();
     
     
