@@ -72,6 +72,7 @@ class RRSchedule{
 
     void compute_strength();
     void update_strength();
+    void scale_strength();
     
     
     bool add_timeslot();

@@ -179,6 +179,14 @@ int RRSchedule::VectMax(Vector _invect)
     return *std::max_element(_invect.begin(), _invect.end());
 }
 
+void RRSchedule::scale_strength()
+{
+    //scale solution wait time
+    scaled_total_wait_time = total_wait_time * std::max( 10*(VectMax(total_played) - VectMin(total_played)) + VectMax(total_waiting) - VectMin(total_waiting), 1);
+    scaled_per_team_wait_time = scaled_total_wait_time * 1.0 / (max_weeks * max_teams * 1.0);
+
+}
+
 bool RRSchedule::add_week()
 {
     bool mincheck = (min_per_night <= VectMin(this_week_played));
@@ -196,14 +204,12 @@ bool RRSchedule::add_week()
         init1D(this_week_played,max_teams);
         
         compute_strength();
+        scale_strength();
         
         printf ("Current Size: %d weeks.  Total Wait Time: %d \n", int(weeks.size()), total_wait_time);
-
+        
         if (weeks.size() == max_weeks)
         {
-            //scale solution wait time
-            scaled_total_wait_time = total_wait_time * (10*std::max(VectMax(total_played) - VectMin(total_played),1) + std::max(VectMax(total_waiting) - VectMin(total_waiting), 1));
-            scaled_per_team_wait_time = scaled_total_wait_time * 1.0 / (max_weeks * max_teams * 1.0);
             fullSolution = true;
         }
     }
