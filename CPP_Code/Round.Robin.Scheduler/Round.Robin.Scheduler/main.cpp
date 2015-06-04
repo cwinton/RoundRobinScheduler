@@ -4,6 +4,9 @@
 //
 //  Created by Corey Winton on 6/3/14.
 //  Copyright (c) 2014 Corey Winton. All rights reserved.
+
+// >> ~/homebrew/bin/g++-4.9 -o rrscheduler -fopenmp main.cpp Schedule.cpp
+// >> ./rrscheduler
 //
 
 #include <iostream>
@@ -11,15 +14,15 @@
 
 
 
-int max_weeks = 13;
-int max_times = 3;
-int max_courts = 4;
-int max_teams = 14;
+int max_weeks = 9;
+int max_times = 6;
+int max_courts = 2;
+int max_teams = 11;
 
 int best_wait_time;
 int scaled_best_wait_time;
 
-char FILENAME[] = "/Users/coreywinton/git/RoundRobinScheduling/CPP_Code/Round.Robin.Scheduler/Round.Robin.Scheduler/schedules.txt";
+char FILENAME[] = "/Users/rditlcww/git/RoundRobinScheduling/CPP_Code/Round.Robin.Scheduler/Round.Robin.Scheduler/schedulesTest.txt";
 
 
 
@@ -34,10 +37,17 @@ int find_schedule(RRSchedule schedule, int home, int away, int counter)
     {
         if (schedule.full_solution())
         {
+            std::cout << "Solution Found" << std::endl;
             if (schedule.scaled_total_wait() < scaled_best_wait_time)
             {
                 best_wait_time = schedule.total_wait();
                 scaled_best_wait_time = schedule.scaled_total_wait();
+/*                printf("*****************************");
+                printf("Time Slots Waiting: %d, (%f per team)", best_wait_time, schedule.wait_per_team());
+                schedule.print_schedule();
+                printf("Time Slots Waiting: %d, (%f per team)", best_wait_time, schedule.wait_per_team());
+                printf("*****************************");
+*/
                 std::cout << "***************************" << std::endl;
                 std::cout << "Time Slots Waiting: " << best_wait_time << "(" << schedule.wait_per_team() << " per team)" << std::endl;
                 schedule.print_schedule();
@@ -67,14 +77,14 @@ int main(int argc, const char * argv[])
     
 #pragma omp parallel
     {
-        // >> ~/homebrew/bin/g++-4.9 -o rrscheduler -fopenmp main.cpp Schedule.cpp
+        // >> ~/homebrew/bin/g++-4.9 -std=c++11 -o rrscheduler -fopenmp main.cpp Schedule.cpp
         // >> ./rrscheduler
     printf("OMP: Hello World \n");
     }
 
 
     best_wait_time = max_weeks * max_times * max_courts*2;
-    scaled_best_wait_time = best_wait_time * 100;
+    scaled_best_wait_time = best_wait_time * 100000;
     //best_wait_time = 128;
     std::cout << "HERE WE GO!!!! " << best_wait_time << std::endl;
     RRSchedule newSched(max_weeks, max_times, max_courts, max_teams, FILENAME);

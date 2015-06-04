@@ -16,22 +16,26 @@
 #include <numeric>
 #include <math.h>
 #include <fstream>
-
+#include <time.h>
 
 typedef std::vector<int> Vector;
 typedef std::vector<Vector> DoubleVector;
 typedef std::vector<DoubleVector> TripleVector;
 
 using std::vector;
+static std::vector<int> FACTS = {1, 2, 6, 24, 120, 720, 5040, 40320};
 
+#define DTTMF
 class RRSchedule{
-    const static int MAX_WAIT_TIME = 2;  // <=
-    const static int MAX_PLAYED_GAP = 2; // <
-    const static int MAX_WAIT_GAP = 2;   // <=
-    
     char* FILENAME;
     
-    int max_weeks, max_times, max_courts, max_teams;
+    int MAX_WAIT_TIME; // = 3;  // <= Max time a team can wait each night
+    int MAX_PLAYED_GAP; // = 2; // <= Gap between min times played and max times played
+    int MAX_WAIT_GAP; // = 2*MAX_WAIT_TIME;   // <= Gap between min team wait time and max team wait time
+    int MAX_TIMESLOT_GAP; // = 2; // <=  Gap between count of min timeslot vs. max timeslot appearances
+    int TIMESLOT_FUDGE; // = 2; // Allow teams to play in a timeslot # over "ideal"
+    
+    int max_weeks, max_times, max_courts, max_teams, max_per_time;
     int max_per_night, min_per_night;
     bool fullSolution;
     
@@ -44,6 +48,9 @@ class RRSchedule{
     DoubleVector matchups;
     DoubleVector opponent_counts;
     DoubleVector this_week_matchups;
+    DoubleVector total_this_week_played;
+    DoubleVector timeslots_played;
+    DoubleVector timePermutes;
     
     Vector courts;
     Vector total_played;
@@ -57,6 +64,7 @@ class RRSchedule{
     
     void init1D(Vector& _invect, int);
     void init2D(DoubleVector& _invect, int, int);
+    void init2DEmpty(DoubleVector &_invect, int row, int col);
     
 
     
@@ -69,11 +77,30 @@ class RRSchedule{
     bool isPresent(DoubleVector, Vector);
     int week_strength(DoubleVector, int);
     int wait_time(DoubleVector week, int team);
+    
+    bool elsewhere(int, int);
+    bool themself(int, int);
+    bool that_night(int, int);
+    bool overall(int, int);
+    bool balanced_time(int, int);
+    bool team_timeslot_check(int team);
+    bool check_wait_time(int,int);
+    bool wait_time_check(int);
+    
+    void compute_permutations();
+    bool sort_times(DoubleVector &);
+    DoubleVector reconfigureWeek(DoubleVector, Vector);
+    int compute_waits(DoubleVector);
 
     void compute_strength();
     void update_strength();
     void scale_strength();
+    double total_played_scale_factor();
+    double waiting_scale_factor();
+    double timeslot_scale_factor();
+
     
+    void count_timeslot(Vector _courts, int slot);
     
     bool add_timeslot();
     bool add_week();
@@ -85,6 +112,9 @@ class RRSchedule{
     
     int VectMin(Vector);
     int VectMax(Vector);
+    
+    int DVectMin(DoubleVector);
+    int DVectMax(DoubleVector);
     
 public:
     RRSchedule(int max_weeks, int max_times, int max_courts, int max_teams, char* FILENAME);
