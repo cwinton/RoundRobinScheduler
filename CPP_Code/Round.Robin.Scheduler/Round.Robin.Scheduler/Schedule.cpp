@@ -256,16 +256,32 @@ void RRSchedule::scale_strength()
 bool RRSchedule::add_week()
 {
     bool mincheck = (min_per_night <= VectMin(this_week_played));
+    if (week0)
+    {
+        int temp_min_per_night = (max_courts * (max_times - skip_first) * 2) / max_teams;
+        mincheck = temp_min_per_night <= VectMin(this_week_played);
+    }
+    
     bool noWait = false;
     if (mincheck)
     {
         //print_DoubleVector(timeslots);
-        noWait = sort_times(timeslots);
+        if (not week0)
+        {
+            noWait = sort_times(timeslots);
+        }
+        else
+        {
+            noWait = true;
+        }
         //print_DoubleVector(timeslots);
         if (noWait)
         {
             weeks.push_back(timeslots);
             store_timeslot();
+            
+            // No longer first week after successful addition of timeslot
+            week0 = false;
             
             allocate2D(timeslots, max_times, max_courts*2);
             init2D(this_week_matchups, max_teams, max_teams);
@@ -307,7 +323,10 @@ void RRSchedule::count_timeslot(Vector _courts, int slot)
 {
     for (Vector::const_iterator iter = _courts.begin(); iter != _courts.end(); ++iter)
     {
-        timeslots_played[*iter][slot] ++;
+        if (*iter >= 0)
+        {
+            timeslots_played[*iter][slot] ++;
+        }
     }
 }
 
@@ -316,10 +335,11 @@ bool RRSchedule::add_timeslot()
     count_timeslot(courts, int(timeslots.size()));
 
     timeslots.push_back(courts);
-    
+
+    //print_DoubleVector(timeslots);
     allocate1D(courts, max_courts*2);
     
-    if (timeslots.size() == max_times)
+    if ((timeslots.size() == max_times) or ((weeks.size() == 0) and (timeslots.size() + skip_first == max_times)))
         return add_week();
     else
         update_strength();
@@ -381,10 +401,17 @@ bool RRSchedule::elsewhere(int home, int away)
 
 bool RRSchedule::that_night(int home, int away)
 {
+    int effective_max;
+    
+    if (week0)
+        effective_max = w0_max_per_night;
+    else
+        effective_max = max_per_night;
+    
     // Ensure the teams have not played too much already that night
-    return (    (this_week_played[home] < max_per_night) and
-                (this_week_played[away] < max_per_night)
-            );
+    return (    (this_week_played[home] < effective_max) and
+                (this_week_played[away] < effective_max)
+                );
 }
 
 bool RRSchedule::overall(int home, int away)
@@ -501,14 +528,19 @@ bool RRSchedule::add_game(int home, int away)
     courts.push_back(home);
     courts.push_back(away);
     
-    total_played[home]++;
-    total_played[away]++;
+    if ((home >= 0) and (away >=0))
+    {
+        total_played[home]++;
+        total_played[away]++;
     
-    this_week_played[home] ++;
-    this_week_played[away] ++;
+        this_week_played[home] ++;
+        this_week_played[away] ++;
     
-    opponent_counts[home][away] ++;
-    opponent_counts[away][home] ++;
+        opponent_counts[home][away] ++;
+        opponent_counts[away][home] ++;
+    }
+    
+//    print_Vector(courts);
     
     if (courts.size() == max_courts * 2)
         return add_timeslot();
@@ -677,26 +709,24 @@ bool RRSchedule::sort_times(DoubleVector &_week)
 
 }
 
-
-RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max_teams, char* _FILENAME)
+RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max_teams, char* _FILENAME, int SKIP_FIRST)
 {
     max_weeks = _max_weeks;
     max_times = _max_times;
     max_courts = _max_courts;
     max_teams = _max_teams;
-
+    skip_first = SKIP_FIRST;
 
     
     FILENAME = _FILENAME;
     
+    week0 = (skip_first > 0);   // Check if special considerations need to be made for the first week (allowing a meeting)
+
     min_per_night = (max_courts * max_times * 2) / max_teams;
-    // Relax the min per night requirement?
-/*    if (min_per_night > 1)
-    {
-        min_per_night--;
-    }
-*/
+    w0_min_per_night = (max_courts * (max_times-skip_first) * 2) / max_teams;
+
     max_per_night = (max_courts * max_times * 2) / max_teams + ( ((max_courts * max_times * 2) % max_teams) != 0);
+    w0_max_per_night = (max_courts * (max_times - skip_first) * 2) / max_teams + ( ((max_courts * (max_times - skip_first) * 2) % max_teams) != 0);
     
     MAX_PLAYED_GAP = 2; // <= Gap between min times played and max times played
     
@@ -727,13 +757,14 @@ RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max
     init2D(opponent_counts, max_teams, max_teams);
     allocate2D(timeslots, max_times, max_courts*2);
     allocate2D(matchups, max_weeks * max_times * max_courts, 2);
-    init2D(this_week_matchups, max_times*max_courts, 2);
+    init2D(this_week_matchups, (max_times-skip_first)*max_courts, 2);
     init2D(timeslots_played, max_teams, max_times);
     allocate2D(timePermutes, FACTS[max_times], max_times);
     compute_permutations();
     allocate2D(total_this_week_played,max_weeks, max_teams);
     
     allocate3D(weeks, max_weeks, max_times, max_courts*2);
+    
     
     // clear old file
     std::ofstream outputfile;
@@ -756,6 +787,22 @@ void RRSchedule::print_schedule()
     
     std::cout << "Weeks:" << '\n' << std::flush;
     outputfile << "Weeks:" << '\n' << std::flush;
+    if (skip_first > 0)
+    {
+        Vector oneSlot;
+        DoubleVector fakeTimes;
+        for (int nogame = 0; nogame < max_courts*2; nogame++)
+        {
+            oneSlot.push_back(-1);
+        }
+        for (int noTimes = 0; noTimes < skip_first; noTimes ++)
+        {
+            fakeTimes.push_back(oneSlot);
+        }
+        
+        print_DoubleVector(fakeTimes);
+        print_DoubleVector(fakeTimes, outputfile);
+    }
     print_TripleVector(weeks);
     print_TripleVector(weeks, outputfile);
     

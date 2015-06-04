@@ -14,10 +14,11 @@
 
 
 
-int max_weeks = 9;
+int max_weeks = 10; //9
 int max_times = 6;
 int max_courts = 2;
 int max_teams = 11;
+int SKIP_FIRST = 1;  // Give the director first timeslot of the year as a "explanatory period" and don't put games there
 
 int best_wait_time;
 int scaled_best_wait_time;
@@ -87,7 +88,7 @@ int main(int argc, const char * argv[])
     scaled_best_wait_time = best_wait_time * 100000;
     //best_wait_time = 128;
     std::cout << "HERE WE GO!!!! " << best_wait_time << std::endl;
-    RRSchedule newSched(max_weeks, max_times, max_courts, max_teams, FILENAME);
+    RRSchedule newSched(max_weeks, max_times, max_courts, max_teams, FILENAME, SKIP_FIRST);
     
     find_schedule(newSched, 0, 1, 0);
 

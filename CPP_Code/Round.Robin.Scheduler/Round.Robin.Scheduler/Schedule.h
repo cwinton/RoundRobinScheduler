@@ -35,9 +35,10 @@ class RRSchedule{
     int MAX_TIMESLOT_GAP; // = 2; // <=  Gap between count of min timeslot vs. max timeslot appearances
     int TIMESLOT_FUDGE; // = 2; // Allow teams to play in a timeslot # over "ideal"
     
-    int max_weeks, max_times, max_courts, max_teams, max_per_time;
-    int max_per_night, min_per_night;
+    int max_weeks, max_times, max_courts, max_teams, max_per_time, skip_first;
+    int max_per_night, min_per_night, w0_max_per_night, w0_min_per_night;
     bool fullSolution;
+    bool week0;
     
     int total_wait_time, scaled_total_wait_time;
     double per_team_wait_time, scaled_per_team_wait_time;
@@ -117,7 +118,7 @@ class RRSchedule{
     int DVectMax(DoubleVector);
     
 public:
-    RRSchedule(int max_weeks, int max_times, int max_courts, int max_teams, char* FILENAME);
+    RRSchedule(int max_weeks, int max_times, int max_courts, int max_teams, char* FILENAME, int SKIP_FIRST);
     bool add_game(int home, int away);
     bool add_game_with_feas_check(int,int);
     

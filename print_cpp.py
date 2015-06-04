@@ -32,6 +32,8 @@ def print_schedule(schedule):
     team_defs = {}
     for i in range(max_teams):
         team_defs[i] = "Team {:03}".format(i)
+        
+    team_defs[-1] = "Meeting"
 
     start_date = datetime.date(2015, 5, 27)
     
@@ -83,7 +85,7 @@ def guageStrength(inMat):
     
     strengthArray = lastPlay - firstPlay - timePlay + 1
     
-    return strengthArray, max(strengthArray)*10 + sum(strengthArray)
+    return strengthArray, max(strengthArray)*100 + 10* list(strengthArray).count(max(strengthArray))*(max(strengthArray) - 1) + sum(strengthArray)
 
 def buildPermute(tPermute, games):
     #home =  [games[2*i] for i in tPermute]
@@ -131,15 +133,16 @@ if __name__ == '__main__':
     
     fdata = [line.rstrip('\n') for line in data if line.rstrip('\n') != '']
     
-    max_weeks = int(fdata[1])
-    max_times = int(fdata[2])
-    max_courts = int(fdata[3])
-    max_teams = int(fdata[4])
+    bestStart = (len(fdata) - 1) - fdata[::-1].index('***NEW SCHEDULE***')
+    max_weeks = int(fdata[bestStart + 1])
+    max_times = int(fdata[bestStart + 2])
+    max_courts = int(fdata[bestStart + 3])
+    max_teams = int(fdata[bestStart + 4])
     
     
     print max_weeks, max_times, max_courts, max_teams
     
-    week_data = fdata[6:6+max_weeks*max_times]
+    week_data = fdata[bestStart + 6:bestStart + 6+max_weeks*max_times]
     print fdata    
     print week_data
     
