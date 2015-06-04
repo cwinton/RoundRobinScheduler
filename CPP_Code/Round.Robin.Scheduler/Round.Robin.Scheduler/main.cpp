@@ -14,8 +14,8 @@
 
 
 
-int max_weeks = 10; //9
-int max_times = 6;
+int max_weeks = 4; //9
+int max_times = 3;
 int max_courts = 2;
 int max_teams = 11;
 int SKIP_FIRST = 1;  // Give the director first timeslot of the year as a "explanatory period" and don't put games there

@@ -51,6 +51,7 @@ class RRSchedule{
     DoubleVector this_week_matchups;
     DoubleVector total_this_week_played;
     DoubleVector timeslots_played;
+    DoubleVector courts_played;
     DoubleVector timePermutes;
     
     Vector courts;

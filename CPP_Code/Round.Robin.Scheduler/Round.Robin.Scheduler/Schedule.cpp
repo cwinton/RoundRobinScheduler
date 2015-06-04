@@ -78,11 +78,23 @@ void RRSchedule::print_TripleVector(TripleVector _invect, std::ostream &stream =
 }
 
 void RRSchedule::store_timeslot()
+/* Log the information in the timeslots */
 {
+    // Store who played whom this week
     for (DoubleVector::const_iterator row = this_week_matchups.begin(); row != this_week_matchups.end(); ++row)
     {
         matchups.push_back(*row);
     }
+    
+    // Store who played when this week
+    int tSlotNum = int(week0) * skip_first;
+    for (DoubleVector::const_iterator tSlot = timeslots.begin(); tSlot != timeslots.end(); ++tSlot)
+    {
+        count_timeslot(*tSlot, tSlotNum);
+        tSlotNum++;
+    }
+    
+    
 }
 
 bool RRSchedule::isPresent(Vector _vect, int item)
@@ -283,6 +295,7 @@ bool RRSchedule::add_week()
             // No longer first week after successful addition of timeslot
             week0 = false;
             
+            // Reset the timeslots and matchups for this week
             allocate2D(timeslots, max_times, max_courts*2);
             init2D(this_week_matchups, max_teams, max_teams);
             
@@ -320,6 +333,7 @@ void RRSchedule::update_strength()
 }
 
 void RRSchedule::count_timeslot(Vector _courts, int slot)
+/* Log which teams played in this timeslot */
 {
     for (Vector::const_iterator iter = _courts.begin(); iter != _courts.end(); ++iter)
     {
@@ -331,17 +345,23 @@ void RRSchedule::count_timeslot(Vector _courts, int slot)
 }
 
 bool RRSchedule::add_timeslot()
+/* When timeslot is full; log information and begin fill up new timeslot */
 {
-    count_timeslot(courts, int(timeslots.size()));
+    //Deprecated due to sorting
+    //count_timeslot(courts, int(timeslots.size()));
 
+    // Add courts to timeslot
     timeslots.push_back(courts);
 
-    //print_DoubleVector(timeslots);
+
+    // Reset the courts
     allocate1D(courts, max_courts*2);
     
+    // If timeslots are full, add to the week schedule
     if ((timeslots.size() == max_times) or ((weeks.size() == 0) and (timeslots.size() + skip_first == max_times)))
         return add_week();
     else
+        // Otherwise update strength and continue on
         update_strength();
         return true;
 }
@@ -759,6 +779,7 @@ RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max
     allocate2D(matchups, max_weeks * max_times * max_courts, 2);
     init2D(this_week_matchups, (max_times-skip_first)*max_courts, 2);
     init2D(timeslots_played, max_teams, max_times);
+    init2D(courts_played, max_teams, max_courts);
     allocate2D(timePermutes, FACTS[max_times], max_times);
     compute_permutations();
     allocate2D(total_this_week_played,max_weeks, max_teams);
