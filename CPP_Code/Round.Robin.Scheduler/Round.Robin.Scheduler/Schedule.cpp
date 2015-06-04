@@ -9,45 +9,6 @@
 #include "Schedule.h"
 
 
-/*
-template <typename T>
-T **AllocateTwoDArray( int nRows, int nCols)
-{
-    T **dynamicArray;
-    
-    dynamicArray = new T*[nRows];
-    for( int i = 0 ; i < nRows ; i++ )
-        dynamicArray[i] = new T [nCols];
-    
-    return dynamicArray;
-}
-
-template <typename T>
-void FreeTwoDArray(T** dArray)
-{
-    delete [] *dArray;
-    delete [] dArray;
-}
-
-template<typename T>
-T ***AllocateThreeDArray( int nRows, int nCols, int depth)
-{
-    T ***dynamicArray;
-    
-    dynamicArray = new T**[nrows];
-    for (int i = 0; i < nRows; i++)
-        dynamicArray[i] = AllocateTwoDArray<T>(nCols, depth)
-    
-    return dynamicArray
-}
-
-template<typename T>
-void FreeThreeDArray(T*** dArray)
-{
-    
-}
- */
-
 void RRSchedule::print_Vector(Vector _invect, std::ostream &stream = std::cout)
 {
     for (Vector::const_iterator iter = _invect.begin(); iter != _invect.end(); ++iter)
@@ -76,6 +37,90 @@ void RRSchedule::print_TripleVector(TripleVector _invect, std::ostream &stream =
         stream << '\n' << std::flush;
     }
 }
+
+int RRSchedule::DVectMin(DoubleVector _invect)
+{
+    int global_min = max_per_time;
+    for (DoubleVector::const_iterator tslot = _invect.begin(); tslot != _invect.end(); ++tslot)
+    {
+        global_min = std::min(VectMin(*tslot), global_min);
+        
+    }
+    return global_min;
+}
+
+int RRSchedule::DVectMax(DoubleVector _invect)
+{
+    int global_max = 0;
+    for (DoubleVector::const_iterator tslot = _invect.begin(); tslot != _invect.end(); ++tslot)
+    {
+        global_max = std::max(VectMax(*tslot), global_max);
+        
+    }
+    return global_max;
+}
+
+int RRSchedule::VectMin (Vector _invect)
+{
+    int min = *std::min_element(_invect.begin(), _invect.end());
+    return min;
+}
+
+int RRSchedule::VectMax(Vector _invect)
+{
+    return *std::max_element(_invect.begin(), _invect.end());
+}
+
+
+void RRSchedule::allocate1D(Vector& _invect, int dim)
+{
+    _invect.clear();
+    _invect.reserve(dim);
+}
+
+void RRSchedule::init1D(Vector& _invect, int row)
+{
+    _invect.clear();
+    _invect.resize(row);
+    std::fill(_invect.begin(), _invect.end(), 0);
+}
+
+void RRSchedule::init2D(DoubleVector& _invect, int row, int col)
+{
+    _invect.clear();
+    _invect.resize(row);
+    for (int i = 0; i < row; i++)
+        init1D(_invect[i], col);
+}
+
+void RRSchedule::init2DEmpty(DoubleVector &_invect, int row, int col)
+{
+    _invect.clear();
+    _invect.resize(row);
+    for (int i = 0; i < row; i++)
+        allocate1D(_invect[i], col);
+}
+
+void RRSchedule::allocate2D(DoubleVector& _invect, int row, int col)
+{
+    _invect.clear();
+    _invect.reserve(row);
+    
+}
+
+void RRSchedule::allocate3D(TripleVector & _invect, int row, int col, int depth)
+{
+    _invect.clear();
+    _invect.reserve(row);
+    for (int i = 0; i < row; i++)
+    {
+        allocate2D(_invect[i], col, depth);
+    }
+}
+
+
+
+
 
 void RRSchedule::store_timeslot()
 /* Log the information in the timeslots */
@@ -189,38 +234,6 @@ void RRSchedule::compute_strength()
 
 }
 
-int RRSchedule::DVectMin(DoubleVector _invect)
-{
-    int global_min = max_per_time;
-    for (DoubleVector::const_iterator tslot = _invect.begin(); tslot != _invect.end(); ++tslot)
-    {
-        global_min = std::min(VectMin(*tslot), global_min);
-        
-    }
-    return global_min;
-}
-
-int RRSchedule::DVectMax(DoubleVector _invect)
-{
-    int global_max = 0;
-    for (DoubleVector::const_iterator tslot = _invect.begin(); tslot != _invect.end(); ++tslot)
-    {
-        global_max = std::max(VectMax(*tslot), global_max);
-        
-    }
-    return global_max;
-}
-
-int RRSchedule::VectMin (Vector _invect)
-{
-    int min = *std::min_element(_invect.begin(), _invect.end());
-    return min;
-}
-
-int RRSchedule::VectMax(Vector _invect)
-{
-    return *std::max_element(_invect.begin(), _invect.end());
-}
 
 double RRSchedule::total_played_scale_factor()
 {
@@ -568,51 +581,6 @@ bool RRSchedule::add_game(int home, int away)
         return true;
 }
 
-void RRSchedule::allocate1D(Vector& _invect, int dim)
-{
-    _invect.clear();
-    _invect.reserve(dim);
-}
-
-void RRSchedule::init1D(Vector& _invect, int row)
-{
-    _invect.clear();
-    _invect.resize(row);
-    std::fill(_invect.begin(), _invect.end(), 0);
-}
-
-void RRSchedule::init2D(DoubleVector& _invect, int row, int col)
-{
-    _invect.clear();
-    _invect.resize(row);
-    for (int i = 0; i < row; i++)
-        init1D(_invect[i], col);
-}
-
-void RRSchedule::init2DEmpty(DoubleVector &_invect, int row, int col)
-{
-    _invect.clear();
-    _invect.resize(row);
-    for (int i = 0; i < row; i++)
-        allocate1D(_invect[i], col);
-}
-
-void RRSchedule::allocate2D(DoubleVector& _invect, int row, int col)
-{
-    _invect.clear();
-    _invect.reserve(row);
-
-}
-
-void RRSchedule::allocate3D(TripleVector & _invect, int row, int col, int depth)
-{
-    _invect.clear();
-    _invect.reserve(row);
-    for (int i = 0; i < row; i++)
-    {
-        allocate2D(_invect[i], col, depth);
-    }
-}
 
 void RRSchedule::compute_permutations()
 {
@@ -729,70 +697,6 @@ bool RRSchedule::sort_times(DoubleVector &_week)
 
 }
 
-RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max_teams, char* _FILENAME, int SKIP_FIRST)
-{
-    max_weeks = _max_weeks;
-    max_times = _max_times;
-    max_courts = _max_courts;
-    max_teams = _max_teams;
-    skip_first = SKIP_FIRST;
-
-    
-    FILENAME = _FILENAME;
-    
-    week0 = (skip_first > 0);   // Check if special considerations need to be made for the first week (allowing a meeting)
-
-    min_per_night = (max_courts * max_times * 2) / max_teams;
-    w0_min_per_night = (max_courts * (max_times-skip_first) * 2) / max_teams;
-
-    max_per_night = (max_courts * max_times * 2) / max_teams + ( ((max_courts * max_times * 2) % max_teams) != 0);
-    w0_max_per_night = (max_courts * (max_times - skip_first) * 2) / max_teams + ( ((max_courts * (max_times - skip_first) * 2) % max_teams) != 0);
-    
-    MAX_PLAYED_GAP = 2; // <= Gap between min times played and max times played
-    
-    if (max_per_night > 2) then:
-    {
-        MAX_WAIT_TIME = max_per_night;   // <= Max time a team can wait each night
-    }
-    else
-    {
-        MAX_WAIT_TIME = min_per_night;
-    }
-    
-    MAX_WAIT_GAP = max_weeks * MAX_WAIT_TIME;   // <= Gap between min team wait time and max team wait time
-    
-    MAX_TIMESLOT_GAP = max_weeks; // <=  Gap between count of min timeslot vs. max timeslot appearances
-    TIMESLOT_FUDGE = 2*max_per_night; // Allow teams to play in a timeslot # over "ideal"
-    max_per_time = 2*max_weeks; //(max_weeks * max_courts * 2) / max_teams + ( ((max_weeks * max_courts * 2) % max_teams) != 0) + TIMESLOT_FUDGE;
-
-    
-    fullSolution = false;
-    total_wait_time = 0;
-    
-    init1D(this_week_played, max_teams);
-    allocate1D(courts, max_courts*2);
-    init1D(total_played, max_teams);
-    init1D(total_waiting, max_teams);
-    
-    init2D(opponent_counts, max_teams, max_teams);
-    allocate2D(timeslots, max_times, max_courts*2);
-    allocate2D(matchups, max_weeks * max_times * max_courts, 2);
-    init2D(this_week_matchups, (max_times-skip_first)*max_courts, 2);
-    init2D(timeslots_played, max_teams, max_times);
-    init2D(courts_played, max_teams, max_courts);
-    allocate2D(timePermutes, FACTS[max_times], max_times);
-    compute_permutations();
-    allocate2D(total_this_week_played,max_weeks, max_teams);
-    
-    allocate3D(weeks, max_weeks, max_times, max_courts*2);
-    
-    
-    // clear old file
-    std::ofstream outputfile;
-    outputfile.open(FILENAME);
-    outputfile.close();
-}
-
 void RRSchedule::print_schedule()
 {
     
@@ -863,7 +767,72 @@ void RRSchedule::print_schedule()
     std::cout << "\nWaits Per Team: \n" << std::flush;
     print_Vector(total_waiting);
     print_Vector(total_waiting, outputfile);
-   
+    
     
     outputfile.close();
 }
+
+RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max_teams, char* _FILENAME, int SKIP_FIRST)
+{
+    max_weeks = _max_weeks;
+    max_times = _max_times;
+    max_courts = _max_courts;
+    max_teams = _max_teams;
+    skip_first = SKIP_FIRST;
+
+    
+    FILENAME = _FILENAME;
+    
+    week0 = (skip_first > 0);   // Check if special considerations need to be made for the first week (allowing a meeting)
+
+    min_per_night = (max_courts * max_times * 2) / max_teams;
+    w0_min_per_night = (max_courts * (max_times-skip_first) * 2) / max_teams;
+
+    max_per_night = (max_courts * max_times * 2) / max_teams + ( ((max_courts * max_times * 2) % max_teams) != 0);
+    w0_max_per_night = (max_courts * (max_times - skip_first) * 2) / max_teams + ( ((max_courts * (max_times - skip_first) * 2) % max_teams) != 0);
+    
+    MAX_PLAYED_GAP = 2; // <= Gap between min times played and max times played
+    
+    if (max_per_night > 2) then:
+    {
+        MAX_WAIT_TIME = max_per_night;   // <= Max time a team can wait each night
+    }
+    else
+    {
+        MAX_WAIT_TIME = min_per_night;
+    }
+    
+    MAX_WAIT_GAP = max_weeks * MAX_WAIT_TIME;   // <= Gap between min team wait time and max team wait time
+    
+    MAX_TIMESLOT_GAP = max_weeks; // <=  Gap between count of min timeslot vs. max timeslot appearances
+    TIMESLOT_FUDGE = 2*max_per_night; // Allow teams to play in a timeslot # over "ideal"
+    max_per_time = 2*max_weeks; //(max_weeks * max_courts * 2) / max_teams + ( ((max_weeks * max_courts * 2) % max_teams) != 0) + TIMESLOT_FUDGE;
+
+    
+    fullSolution = false;
+    total_wait_time = 0;
+    
+    init1D(this_week_played, max_teams);
+    allocate1D(courts, max_courts*2);
+    init1D(total_played, max_teams);
+    init1D(total_waiting, max_teams);
+    
+    init2D(opponent_counts, max_teams, max_teams);
+    allocate2D(timeslots, max_times, max_courts*2);
+    allocate2D(matchups, max_weeks * max_times * max_courts, 2);
+    init2D(this_week_matchups, (max_times-skip_first)*max_courts, 2);
+    init2D(timeslots_played, max_teams, max_times);
+    init2D(courts_played, max_teams, max_courts);
+    allocate2D(timePermutes, FACTS[max_times], max_times);
+    compute_permutations();
+    allocate2D(total_this_week_played,max_weeks, max_teams);
+    
+    allocate3D(weeks, max_weeks, max_times, max_courts*2);
+    
+    
+    // clear old file
+    std::ofstream outputfile;
+    outputfile.open(FILENAME);
+    outputfile.close();
+}
+
