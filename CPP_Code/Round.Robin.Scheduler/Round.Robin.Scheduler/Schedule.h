@@ -40,8 +40,8 @@ class RRSchedule{
     bool fullSolution;
     bool week0;
     
-    int total_wait_time, scaled_total_wait_time;
-    double per_team_wait_time, scaled_per_team_wait_time;
+    int total_wait_time, fitness_level;
+    double per_team_wait_time, scaled_fitness_level;
     
     TripleVector weeks;
 
@@ -57,9 +57,13 @@ class RRSchedule{
     Vector courts;
     Vector total_played;
     Vector this_week_played;
-    Vector total_waiting;
+    Vector total_waiting_by_team;
 
     
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** START TOOLS ///////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
     void allocate1D (Vector&, int);
     void allocate2D (DoubleVector & _invect, int row, int col);
     void allocate3D (TripleVector & _invect, int row, int col, int depth);
@@ -68,57 +72,86 @@ class RRSchedule{
     void init2D(DoubleVector& _invect, int, int);
     void init2DEmpty(DoubleVector &_invect, int row, int col);
     
-
-    
     void print_Vector(Vector _invect, std::ostream&);
     void print_DoubleVector(DoubleVector _invect, std::ostream&);
     void print_TripleVector(TripleVector _invect, std::ostream&);
 
-    
-    bool isPresent(Vector, int);
-    bool isPresent(DoubleVector, Vector);
-    int week_strength(DoubleVector, int);
-    int wait_time(DoubleVector week, int team);
-    
-    bool elsewhere(int, int);
-    bool themself(int, int);
-    bool that_night(int, int);
-    bool overall(int, int);
-    bool balanced_time(int, int);
-    bool team_timeslot_check(int team);
-    bool check_wait_time(int,int);
-    bool wait_time_check(int);
-    
-    void compute_permutations();
-    bool sort_times(DoubleVector &);
-    DoubleVector reconfigureWeek(DoubleVector, Vector);
-    int compute_waits(DoubleVector);
-
-    void compute_strength();
-    void update_strength();
-    void scale_strength();
-    double total_played_scale_factor();
-    double waiting_scale_factor();
-    double timeslot_scale_factor();
-
-    
-    void count_timeslot(Vector _courts, int slot);
-    
-    bool add_timeslot();
-    bool add_week();
-    void store_timeslot();
-    
-    bool check_feasible(int, int);
-    bool teams_feasible(int, int);
-    bool matchup_feasible(int, int);
-    
     int VectMin(Vector);
     int VectMax(Vector);
     
     int DVectMin(DoubleVector);
     int DVectMax(DoubleVector);
     
+    bool isPresent(Vector, int);
+    bool isPresent(DoubleVector, Vector);
+    
+    void compute_permutations();
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** END TOOLS /////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** EVALUATIVE METHODS ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DEPRECATE DUE TO SORTING
+    //      int wait_time(DoubleVector week, int team);
+    Vector compute_team_waits_for_week(DoubleVector);       // Compute how long each team will wait in a week
+    void compute_total_team_waits();                        // Compute how long each team has waited (total_wait_time; per_team_wait_time)
+    void update_total_team_waits();                         // Update wait times    (total_wait_time; per_team_wait_time)
+    double total_played_scale_factor();                     // Return difference in total game played max/min
+    double waiting_scale_factor();                          // Return team wait difference
+    double timeslot_scale_factor();                         // Return frequency of appearence in timeslots
+    void compute_fitness();                                 // Determine fitness of schedule based on wait time & others
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** END EVALUATIVE METHODS ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** SORTING ALGORITHMS ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    int compute_week_fitness(DoubleVector);                 // Compute fitness of timeslot sort
+    DoubleVector reconfigureWeek(DoubleVector, Vector);     // Permutes the week's timeslots
+    bool sort_times(DoubleVector &);                        // Sorts and selects "best" configuration
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** END SORTING ALGORITHMS ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** "ROLLUP" METHODS //////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    void count_timeslot(Vector _courts, int slot);      // Log which teams played in each timeslot
+    void store_timeslot();      // Log the information in the timeslots when adding to week
+    bool add_week();            // Adds a full set of timeslots to the week (after sorting)
+    bool add_timeslot();        // Adds a full set of courts to a timeslot
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** END "ROLLUP" METHODS //////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** TEAM BASED  ///////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DEPRECATED DUE TO SORTING:
+    //    bool balanced_time(int, int);
+    //    bool team_timeslot_check(int team);
+    //    bool check_wait_time(int,int);
+    //    bool wait_time_check(int);
+    bool elsewhere(int, int);       // Playing elsewhere?
+    bool themself(int, int);        // Playing themselves?
+    bool that_night(int, int);      // Played too many times that night?
+    bool overall(int, int);         // Played too many times relative to others?
+    
+    bool teams_feasible(int, int);  // Are the teams eligible to play
+    bool matchup_feasible(int, int);    // Is the matchup eligible to happen
+    bool check_feasible(int, int);  // Is the entire proposition eligible
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** END TEAM BASED/////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
 public:
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** PUBLIC METHODS ////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     RRSchedule(int max_weeks, int max_times, int max_courts, int max_teams, char* FILENAME, int SKIP_FIRST);
     bool add_game(int home, int away);
     bool add_game_with_feas_check(int,int);
@@ -128,13 +161,16 @@ public:
     double wait_per_team(){return per_team_wait_time;}
     int total_wait(){return total_wait_time;}
     
-    double scaled_wait_per_team(){return scaled_per_team_wait_time;}
-    int scaled_total_wait(){return scaled_total_wait_time;}
+    double eval_scaled_fitness_level(){return scaled_fitness_level;}
+    int eval_fitness_level(){return fitness_level;}
 
     void print_schedule();
     
     
     int get_weeks() {return max_weeks; }
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ///// ********** END PUBLIC METHODS ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 };
 
 #endif /* defined(__Round_Robin_Scheduler__Schedule__) */

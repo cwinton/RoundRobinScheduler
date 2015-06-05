@@ -21,7 +21,7 @@ int max_teams = 11;
 int SKIP_FIRST = 1;  // Give the director first timeslot of the year as a "explanatory period" and don't put games there
 
 int best_wait_time;
-int scaled_best_wait_time;
+int best_fitness;
 
 char FILENAME[] = "/Users/rditlcww/git/RoundRobinScheduling/CPP_Code/Round.Robin.Scheduler/Round.Robin.Scheduler/schedulesTest.txt";
 
@@ -39,10 +39,10 @@ int find_schedule(RRSchedule schedule, int home, int away, int counter)
         if (schedule.full_solution())
         {
             std::cout << "Solution Found" << std::endl;
-            if (schedule.scaled_total_wait() < scaled_best_wait_time)
+            if (schedule.eval_fitness_level() < best_fitness)
             {
                 best_wait_time = schedule.total_wait();
-                scaled_best_wait_time = schedule.scaled_total_wait();
+                best_fitness = schedule.eval_fitness_level();
 /*                printf("*****************************");
                 printf("Time Slots Waiting: %d, (%f per team)", best_wait_time, schedule.wait_per_team());
                 schedule.print_schedule();
@@ -85,7 +85,7 @@ int main(int argc, const char * argv[])
 
 
     best_wait_time = max_weeks * max_times * max_courts*2;
-    scaled_best_wait_time = best_wait_time * 100000;
+    best_fitness = best_wait_time * 1000000;
     //best_wait_time = 128;
     std::cout << "HERE WE GO!!!! " << best_wait_time << std::endl;
     RRSchedule newSched(max_weeks, max_times, max_courts, max_teams, FILENAME, SKIP_FIRST);
