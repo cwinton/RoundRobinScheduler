@@ -14,11 +14,11 @@
 
 
 
-int max_weeks = 4; //9
-int max_times = 3;
-int max_courts = 2;
-int max_teams = 11;
-int SKIP_FIRST = 1;  // Give the director first timeslot of the year as a "explanatory period" and don't put games there
+int max_weeks = 1; //9
+int max_times = 4;
+int max_courts = 4;
+int max_teams = 8;
+int SKIP_FIRST = 0;  // Give the director first timeslot of the year as a "explanatory period" and don't put games there
 
 int best_wait_time;
 int best_fitness;
@@ -34,11 +34,11 @@ int find_schedule(RRSchedule schedule, int home, int away, int counter)
 {
     //counter ++;
     //printf("%d \n", counter);
-    if (schedule.add_game_with_feas_check(home, away) and schedule.total_wait() < best_wait_time)
+    if (schedule.add_game_with_feas_check(home, away) and schedule.on_Track(best_wait_time, best_fitness))
     {
         if (schedule.full_solution())
         {
-            std::cout << "Solution Found" << std::endl;
+            std::cout << "Solution Found.  Score to beat: " << best_fitness << std::endl;
             if (schedule.eval_fitness_level() < best_fitness)
             {
                 best_wait_time = schedule.total_wait();
@@ -82,7 +82,7 @@ int main(int argc, const char * argv[])
         // >> ./rrscheduler
     printf("OMP: Hello World \n");
     }
-
+    srand(time(NULL));
 
     best_wait_time = max_weeks * max_times * max_courts*2;
     best_fitness = best_wait_time * 1000000;
@@ -90,7 +90,7 @@ int main(int argc, const char * argv[])
     std::cout << "HERE WE GO!!!! " << best_wait_time << std::endl;
     RRSchedule newSched(max_weeks, max_times, max_courts, max_teams, FILENAME, SKIP_FIRST);
     
-    find_schedule(newSched, 0, 1, 0);
+    find_schedule(newSched, rand() % max_teams, rand() % max_teams, 0);
 
     
 /*    for (int home = 0; home < 500; home ++)

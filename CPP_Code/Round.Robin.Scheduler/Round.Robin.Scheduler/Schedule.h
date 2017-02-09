@@ -24,6 +24,7 @@ typedef std::vector<DoubleVector> TripleVector;
 
 using std::vector;
 static std::vector<int> FACTS = {1, 2, 6, 24, 120, 720, 5040, 40320};
+static int PRINTED_SOLUTIONS;  // Number of printed solutions
 
 #define DTTMF
 class RRSchedule{
@@ -53,6 +54,7 @@ class RRSchedule{
     DoubleVector timeslots_played;
     DoubleVector courts_played;
     DoubleVector timePermutes;
+    DoubleVector waits_by_week;
     
     Vector courts;
     Vector total_played;
@@ -78,6 +80,9 @@ class RRSchedule{
 
     int VectMin(Vector);
     int VectMax(Vector);
+    int VectSum(Vector);
+    double VectAvg(Vector _invect);
+    void VectDotSum(Vector & _result, Vector _toAdd);
     
     int DVectMin(DoubleVector);
     int DVectMax(DoubleVector);
@@ -113,6 +118,7 @@ class RRSchedule{
     int compute_week_fitness(DoubleVector);                 // Compute fitness of timeslot sort
     DoubleVector reconfigureWeek(DoubleVector, Vector);     // Permutes the week's timeslots
     bool sort_times(DoubleVector &);                        // Sorts and selects "best" configuration
+    bool sort_times_new(DoubleVector &);                        // Sorts and selects "best" configuration
     ////////////////////////////////////////////////////////////////////////////////////////////////
     ///// ********** END SORTING ALGORITHMS ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -165,6 +171,8 @@ public:
     int eval_fitness_level(){return fitness_level;}
 
     void print_schedule();
+    
+    bool on_Track(int, int);
     
     
     int get_weeks() {return max_weeks; }

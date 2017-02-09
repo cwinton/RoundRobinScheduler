@@ -75,6 +75,21 @@ int RRSchedule::VectMax(Vector _invect)
     return *std::max_element(_invect.begin(), _invect.end());
 }
 
+int RRSchedule::VectSum(Vector _invect)
+{
+    return std::accumulate(_invect.begin(), _invect.end(), 0);
+}
+
+double RRSchedule::VectAvg(Vector _invect)
+{
+    std::cout << VectSum(_invect) << " / " << _invect.size() << " = " << 1.0*VectSum(_invect) / (1.0*_invect.size()) << std::endl;
+    return 1.0*VectSum(_invect) / (1.0*_invect.size());
+}
+
+void RRSchedule::VectDotSum(Vector & _result, Vector _toAdd)
+{
+    std::transform(_result.begin(), _result.end(), _toAdd.begin(), _result.begin(), std::plus<int>());
+}
 
 void RRSchedule::allocate1D(Vector& _invect, int dim)
 {
@@ -234,14 +249,10 @@ void RRSchedule::compute_total_team_waits()
     total_wait_time = 0;
     init1D(total_waiting_by_team, max_teams);
     
-    for (TripleVector::const_iterator week = weeks.begin(); week != weeks.end(); ++ week)
+    for (DoubleVector::const_iterator week = waits_by_week.begin(); week != waits_by_week.end(); ++ week)
     {
-        Vector team_waits = compute_team_waits_for_week(*week);
-        for (int team = 0; team < max_teams; team++)
-        {
-            total_wait_time += team_waits[team];
-            total_waiting_by_team[team] += team_waits[team];
-        }
+        total_wait_time += VectSum(*week);
+        VectDotSum(total_waiting_by_team, *week);
     }
     
     per_team_wait_time = total_wait_time * 1.0 / (max_weeks * max_teams * 1.0);
@@ -259,7 +270,7 @@ void RRSchedule::update_total_team_waits()
     Vector current_waits = compute_team_waits_for_week(timeslots);
     
     // Total wait times
-    total_wait_time += std::accumulate(current_waits.begin(), current_waits.end(), 0);
+    total_wait_time += VectSum(current_waits);
     
     per_team_wait_time = total_wait_time * 1.0 / (max_weeks * max_teams * 1.0);
 }
@@ -280,12 +291,15 @@ double RRSchedule::waiting_scale_factor()
 double RRSchedule::timeslot_scale_factor()
 {
     // Return a coefficient indicating whether teams play in the same timeslot or different ones over the course of the season
-    int total_timeslot_discrepancy = 0;
+    Vector team_timeslot_diff;
+    //int total_timeslot_discrepancy = 0;
     for (DoubleVector::const_iterator tslot = timeslots_played.begin(); tslot != timeslots_played.end(); ++tslot)
     {
-        total_timeslot_discrepancy += VectMax(*tslot) - VectMin(*tslot);
+        team_timeslot_diff.push_back(VectMax(*tslot) - VectMin(*tslot));
+        //total_timeslot_discrepancy += VectMax(*tslot) - VectMin(*tslot);
     }
-    return ((1.0*std::max(total_timeslot_discrepancy, 1)) / max_teams);
+//    return ((1.0*std::max(total_timeslot_discrepancy, 1)) / max_teams);
+    return (std::max(VectMax(team_timeslot_diff)*10.0 + VectAvg(team_timeslot_diff), 1.0));
     //return 1.0;
 }
 
@@ -293,23 +307,22 @@ void RRSchedule::compute_fitness()
 {
     //scale solution wait time
     
-    fitness_level =      10*total_wait_time
-    + 100* total_played_scale_factor()
-    + 5* waiting_scale_factor()
-    + 1* timeslot_scale_factor();
+    fitness_level = 100*total_wait_time //1800
+        + 100* total_played_scale_factor() //100
+        + 50* waiting_scale_factor() //50
+        + 100* timeslot_scale_factor();
     
     /*scaled_total_wait_time = total_wait_time * std::max(100*(VectMax(total_played) - VectMin(total_played))
      + 10*(VectMax(total_waiting) - VectMin(total_waiting)) //, 1);
      + 1 *(DVectMax(timeslots_played) - DVectMin(timeslots_played)), 1);
      *///1 * (VectMax(timeslots_played) - VectMin(timeslots_played))
-    scaled_fitness_level = fitness_level * 1.0 / (max_weeks * max_teams * 1.0);
+    
+    
+    // The scaled fitness level should give insight into how good a "schedule-in-progress" is
+    // Scale the current fitness level 
+    scaled_fitness_level = 1.0 * fitness_level * weeks.size() / (1.0 * max_weeks);
     
 }
-
-
-
-
-
 
 
 
@@ -326,12 +339,17 @@ int RRSchedule::compute_week_fitness(DoubleVector _week)
 {
     // Compute how long the teams waited in a week
     Vector team_wait = compute_team_waits_for_week(_week);
-
+    //std::cout << "**" <<std::endl;
+    //print_Vector(team_wait);
+    //print_Vector(total_waiting_by_team);
+    VectDotSum(team_wait, total_waiting_by_team);
+    //print_Vector(team_wait);
+    //std::cout << "**" <<std::endl;
     
     // The fitness is based on the longest team wait; frequency of the longest wait; total wait time
     return 100 * VectMax(team_wait)
     + 10 * int(VectMax(team_wait) > 1) * int(std::count(team_wait.begin(), team_wait.end(), VectMax(team_wait)))
-    + std::accumulate(team_wait.begin(), team_wait.end(), 0);
+    + VectSum(team_wait);
 }
 
 DoubleVector RRSchedule::reconfigureWeek(DoubleVector _week, Vector _permute)
@@ -374,7 +392,7 @@ bool RRSchedule::sort_times(DoubleVector &_week)
         {
             bestWeek = testWeek;
             minScore = score;
-            std::cout << "Week Score (Sorted): " << score << std::endl;
+            //std::cout << "Week Score (Sorted): " << score << std::endl;
         }
     }
     
@@ -384,6 +402,52 @@ bool RRSchedule::sort_times(DoubleVector &_week)
     return true;
     
 }
+
+bool RRSchedule::sort_times_new(DoubleVector &_week)
+{
+    int minScore = max_teams * 100 * max_times;
+    int score;
+    Vector team_waits_now;
+    DoubleVector bestWeek;
+    Vector bestWaits;
+    TripleVector potentialWeeks;
+    
+    //print_DoubleVector(_week);
+    
+    // Loop through all permutations of timeslots
+    for (DoubleVector::const_iterator permute = timePermutes.begin(); permute != timePermutes.end(); ++permute)
+    {
+        DoubleVector testWeek = reconfigureWeek(_week, *permute);
+        
+        // Score the week based on total team waiting time
+        score = compute_week_fitness(testWeek);
+        
+        // If the score is an improvement, keep that permutation
+        if (score < minScore)
+        {
+            potentialWeeks.clear();
+            potentialWeeks.push_back(testWeek);
+            //bestWeek = testWeek;
+            minScore = score;
+            //std::cout << "Week Score (Sorted): " << score << std::endl;
+        }
+        else if (score == minScore)
+        {
+            potentialWeeks.push_back(testWeek);
+        }
+    }
+    
+    int randSelect = rand() % potentialWeeks.size();
+    bestWeek = potentialWeeks[randSelect];
+    
+    //std::cout << "Random Selection: " << potentialWeeks.size() << "," << randSelect << std::endl;
+    
+    // Ugh, sorry; Hard overwrite the timeslots with the best version of the week
+    timeslots = bestWeek;
+    return true;
+    
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 ///// ********** END SORTING ALGORITHMS ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -421,6 +485,10 @@ void RRSchedule::store_timeslot()
         tSlotNum++;
     }
     
+    // Store how long each team waited this week
+    waits_by_week.push_back(compute_team_waits_for_week(timeslots));
+
+    
     
 }
 
@@ -435,48 +503,57 @@ bool RRSchedule::add_week()
         mincheck = temp_min_per_night <= VectMin(this_week_played);
     }
     
-    bool noWait = false;
+    bool goodSort = false;
+    bool acceptableWait = false;
     if (mincheck)
     {
         // Check to ensure sorting is acceptable?
-        noWait = sort_times(timeslots);
-        if (noWait)
+        goodSort = sort_times_new(timeslots);
+        
+        if (goodSort)
         {
-            // Roll up timeslot information into the week and log
-            weeks.push_back(timeslots);
-            store_timeslot();
+            Vector temp_team_waits = total_waiting_by_team;
+            VectDotSum(temp_team_waits, compute_team_waits_for_week(timeslots));
             
-            // No longer first week after successful addition of timeslot
-            week0 = false;
-            
-            // Reset the timeslots and matchups for this week
-            allocate2D(timeslots, max_times, max_courts*2);
-            init2D(this_week_matchups, max_teams, max_teams);
-            
-            print_Vector(this_week_played);
-            total_this_week_played.push_back(this_week_played);
-            
-            init1D(this_week_played,max_teams);
-            
-            compute_total_team_waits();
-            compute_fitness();
-            
-            // Note progress for user
-            printf ("Current Size: %d weeks (Max Weeks: %d).  Total Wait Time: %d   Scaled Strength: %d\n", int(weeks.size()), max_weeks, total_wait_time, fitness_level);
-            
-            std::cout << weeks.size() << std::endl;
-            
-            if (weeks.size() == max_weeks)
+            acceptableWait = ( VectMax(temp_team_waits) - VectMin(temp_team_waits) <= MAX_WAIT_GAP);
+            if (acceptableWait)
             {
-                fullSolution = true;
-            }
-            else{
-                printf ("Not full Solution\n");
+                // Roll up timeslot information into the week and log
+                weeks.push_back(timeslots);
+                store_timeslot();
                 
+                // No longer first week after successful addition of timeslot
+                week0 = false;
+                
+                // Reset the timeslots and matchups for this week
+                allocate2D(timeslots, max_times, max_courts*2);
+                init2D(this_week_matchups, max_teams, max_teams);
+                
+                total_this_week_played.push_back(this_week_played);
+                
+                init1D(this_week_played,max_teams);
+                
+                compute_total_team_waits();
+                compute_fitness();
+                
+                // Note progress for user
+                printf ("Current Size: %d weeks (Max Weeks: %d).  Total Wait Time: %d   Fitness Level: %d (Scaled Fitness: %.2f) Printed Solutions: %d\n", int(weeks.size()), max_weeks, total_wait_time, fitness_level, scaled_fitness_level, PRINTED_SOLUTIONS);
+                
+                std::cout << weeks.size() << std::endl;
+                
+                if (weeks.size() == max_weeks)
+                {
+                    printf("Full Solution?\n");
+                    fullSolution = true;
+                }
+                else{
+                    printf ("Not full Solution\n");
+                    
+                }
             }
         }
     }
-    return mincheck and noWait;
+    return mincheck and goodSort and acceptableWait;
 }
 
 
@@ -603,8 +680,8 @@ bool RRSchedule::teams_feasible(int home, int away)
  2.  Not playing elsewhere
  3.  Not played too much already that night
  4.  Not played twice more than another team overall
- 5.  Not played too many times in that timeslot
- 6.  Will not force a wait of <x> hours
+ 5.  Not played too many times in that timeslot // Deprecated due to sorting
+ 6.  Will not force a wait of <x> hours // Deprecated due to sorting
  */
 {
     return  (
@@ -678,26 +755,6 @@ bool RRSchedule::check_feasible(int home, int away)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////
 ///// ********** PUBLIC METHODS ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -720,22 +777,22 @@ RRSchedule::RRSchedule(int _max_weeks, int _max_times, int _max_courts, int _max
     max_per_night = (max_courts * max_times * 2) / max_teams + ( ((max_courts * max_times * 2) % max_teams) != 0);
     w0_max_per_night = (max_courts * (max_times - skip_first) * 2) / max_teams + ( ((max_courts * (max_times - skip_first) * 2) % max_teams) != 0);
     
-    MAX_PLAYED_GAP = 2; // <= Gap between min times played and max times played
+    MAX_PLAYED_GAP = 1; // <= Gap between min times played and max times played
     
     if (max_per_night > 2) then:
     {
-        MAX_WAIT_TIME = max_per_night;   // <= Max time a team can wait each night
+        MAX_WAIT_TIME = min_per_night;   // <= Max time a team can wait each night
     }
     else
     {
         MAX_WAIT_TIME = min_per_night;
     }
     
-    MAX_WAIT_GAP = max_weeks * MAX_WAIT_TIME;   // <= Gap between min team wait time and max team wait time
+    MAX_WAIT_GAP = 1; //*max_times ; // /2;   // <= Gap between min team wait time and max team wait time
     
-    MAX_TIMESLOT_GAP = max_weeks; // <=  Gap between count of min timeslot vs. max timeslot appearances
-    TIMESLOT_FUDGE = 2*max_per_night; // Allow teams to play in a timeslot # over "ideal"
-    max_per_time = 2*max_weeks; //(max_weeks * max_courts * 2) / max_teams + ( ((max_weeks * max_courts * 2) % max_teams) != 0) + TIMESLOT_FUDGE;
+    MAX_TIMESLOT_GAP = 2 ; //max_weeks / 2; // <=  Gap between count of min timeslot vs. max timeslot appearances
+    TIMESLOT_FUDGE = 0; // *max_per_night; // Allow teams to play in a timeslot # over "ideal"
+    max_per_time = (max_weeks * max_courts * 2) / max_teams + ( ((max_weeks * max_courts * 2) % max_teams) != 0) + TIMESLOT_FUDGE; //    std::cout << "**" <<std:endl;
     
     
     fullSolution = false;
@@ -804,6 +861,21 @@ bool RRSchedule::add_game(int home, int away)
         return true;
 }
 
+bool RRSchedule::on_Track(int max_wait, int max_fitness)
+// Returns whether a schedule has a chance of beating a completed schedule
+{
+    
+    double week_scale = std::min((weeks.size() + 1.0) / max_weeks, 1.0);
+    
+    // If there's already too many teams waiting, it's not a good solution
+    
+    return ((total_wait_time <= (max_wait*week_scale)));// and
+//            (scaled_fitness_level <= max_fitness * week_scale));
+    
+    
+}
+
+
 void RRSchedule::print_schedule()
 {
     
@@ -866,9 +938,15 @@ void RRSchedule::print_schedule()
     print_DoubleVector(timeslots_played);
     print_DoubleVector(timeslots_played, outputfile);
     
+    std::cout << '\n' << std::flush << "Weekly Wait Counts:" << '\n' << std::flush;
+    outputfile << '\n' << std::flush << "Weekly Wait Counts:" << '\n' << std::flush;
+    print_DoubleVector(waits_by_week);
+    print_DoubleVector(waits_by_week, outputfile);
+
     outputfile << "Hours Waiting: " << total_wait_time << '\n' << std::flush;
     outputfile << "Hours Per Team: " << per_team_wait_time << '\n' << std::flush;
     outputfile << "Scaled Fitness: " << eval_scaled_fitness_level() << '\n' << std::flush;
+    outputfile << "Total Fitness: " << eval_fitness_level() << '\n' << std::flush;
     
     outputfile << "\nWaits Per Team: " << std::flush;
     std::cout << "\nWaits Per Team: \n" << std::flush;
@@ -877,6 +955,8 @@ void RRSchedule::print_schedule()
     
     
     outputfile.close();
+    
+    PRINTED_SOLUTIONS++;
 }
 
 
